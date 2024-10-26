@@ -1,10 +1,6 @@
 const ProductNamespace = {
-    Product: class {
-        constructor(title, price) {
-            this.title = title;
-            this.price = price;
-        }
-    }
-}
+    title: null,
+    price: null
+};
 
 export default ProductNamespace;
