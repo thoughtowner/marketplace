@@ -69,7 +69,7 @@ const ConsumerNamespace = {
             for (let i = 0; i < this.cart.length; i++) {
                 if (this.cart[i]['product'].title === product.title) {
                     if (quantity > this.cart[i]['quantity']) {
-                        throw new Error(`Покупатель "${this.name}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.name}", так как в корзине покупателя меньшее количество товара (${this.cart[i]['quantity']} штук) чем он хотел бы выложить.`);
+                        throw new Error(`Покупатель "${this.name}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.name}", так как в корзине покупателя меньшее количество товара (${this.cart[i]['quantity']} штук), чем он хотел бы выложить.`);
                     }
                     this.cart[i]['quantity'] -= quantity;
                     isExists = true;
@@ -110,7 +110,7 @@ const ConsumerNamespace = {
                         shop.catalog.pop();
                     }
                 }
-                console.log(`Все товары из корзины были успешно куплены. Покупатель "${this.name}" заплатил ${totalCost} заплатил магазину "${shop.name}".`);
+                console.log(`Все товары из корзины были успешно куплены. Покупатель "${this.name}" заплатил ${totalCost} рублей магазину "${shop.name}".`);
             } else {
                 throw new Error(`Товары из корзины не удалось купить. Покупатель "${this.name}" не может заплатить ${totalCost} рублей магазину "${shop.name}", так как сумма покупки больше, чем есть на счету у покупателя (${this.money} рублей).`);
             }

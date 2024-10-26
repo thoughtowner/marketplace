@@ -3,12 +3,11 @@ const UserNamespace = {
         constructor(username, password) {
             this.username = username;
             this.password = password;
+            this.money = 0;
             this.boughtProducts = [];
         }
 
         buyProducts(consumer) {
-            // this.boughtProducts = consumer.cart.slice();
-            
             let isAlreadyBought = false;
             for (let i = 0; i < consumer.cart.length; i++) {
                 for (let j = 0; j < this.boughtProducts.length; j++) {
