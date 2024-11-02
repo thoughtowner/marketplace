@@ -5,7 +5,6 @@ const UserNamespace = {
             this.isProducer = isProducer || false;
             this.name = name;
             this.password = password;
-            this.money = 0;
             this.boughtProducts = [];
         }
 
@@ -46,13 +45,8 @@ const UserNamespace = {
         addMoneyToConsumer(consumer, money) {
             this.checkRoleAffiliation(consumer);
             this.checkMoneyValue(money);
-            if (this.money >= money) {
-                this.money -= money;
-                consumer.addMoney(money);
-                console.log(`Пользователь "${this.name}" положил на счёт для покупок ${money} рублей.`);
-            } else {
-                throw new Error(`Пользователь "${this.name}" не может положить на счёт для покупок ${money} рублей, так как на балансе пользователя недостаточно средств для этого.`);
-            }
+            consumer.addMoney(money);
+            console.log(`Пользователь "${this.name}" положил на счёт для покупок ${money} рублей.`);
         }
 
         // public
@@ -61,7 +55,6 @@ const UserNamespace = {
             this.checkMoneyValue(money);
             if (producer.money >= money) {
                 producer.reduceMoney(money);
-                this.money += money;
                 console.log(`Пользователь "${this.name}" снял со счёта для продаж ${money} рублей.`);
             } else {
                 throw new Error(`Пользователь "${this.name}" не может снять со счёта для продаж ${money} рублей, так как на счёте для продаж недостаточно средств для этого.`);
