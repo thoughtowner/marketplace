@@ -13,12 +13,25 @@ const ProducerNamespace = {
         }
 
         // private
+        checkQuantityValue(quantity) {
+            if (typeof quantity !== 'number') {
+                throw new Error(`Тип значения <quantity> должно быть <number>.`);
+            } else {
+                if (quantity <= 0) {
+                    throw new Error(`Значение <quantity> должно быть больше нуля.`);
+                }
+            }
+        }
+
+        // private
         reduceMoney(money) {
             this.money -= money;
         }
 
         // public
         addProduct(shop, product, quantity) {
+            this.checkShopAffiliation(shop);
+            this.checkQuantityValue(quantity);
             let isProductIncludes = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 if (shop.catalog[i]['product'] === product) {
@@ -41,16 +54,18 @@ const ProducerNamespace = {
 
         // public
         reduceProduct(shop, product, quantity) {
+            this.checkShopAffiliation(shop);
+            this.checkQuantityValue(quantity);
             let isProductExists = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 if (shop.catalog[i]['product'] === product) {
                     isProductExists = true;
-                    if (quantity <= this.catalog[i]['totalQuantity'] - this.catalog[i]['quantityInCart']) {
+                    if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCart']) {
                         shop.catalog[i]['totalQuantity'] -= quantity;
                         console.log(`Пользователь "${this.user.name}" уменьшил в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
                         break;
                     } else {
-                        throw new Error(`Пользователь "${this.user.name}" не может уменьшить в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штукб так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
+                        throw new Error(`Пользователь "${this.user.name}" не может уменьшить в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
                     }
                 }
             }
@@ -61,11 +76,12 @@ const ProducerNamespace = {
 
         // public
         deleteProduct(shop, product) {
+            this.checkShopAffiliation(shop);
             let isProductExists = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 if (shop.catalog[i]['product'] === product) {
                     isProductExists = true;
-                    if (shop.catalog[i]['quantity'] === 0) {
+                    if (shop.catalog[i]['totalQuantity'] === 0) {
                         shop.catalog.splice(i, 1);
                         console.log(`Пользователь "${this.user.name}" удалил из магазина "${shop.title}" товар "${product.title}".`);
                         break;

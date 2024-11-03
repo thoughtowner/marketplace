@@ -9,10 +9,10 @@ const ConsumerNamespace = {
         // private
         checkQuantityValue(quantity) {
             if (typeof quantity !== 'number') {
-                throw new Error(`Тип значения <quantity> должно быть <number>, а не <${typeof quantity}>.`);
+                throw new Error(`Тип значения <quantity> должно быть <number>.`);
             } else {
                 if (quantity <= 0) {
-                    throw new Error(`Значение <quantity> должно быть больше нуля, а не ${quantity}.`);
+                    throw new Error(`Значение <quantity> должно быть больше нуля.`);
                 }
             }
         }
@@ -47,7 +47,7 @@ const ConsumerNamespace = {
                         let isProductInShopIncludes = false;
                         for (let j = 0; j < this.generalCart.length; j++) {
                             if (this.generalCart[j]['shop'] === shop) {
-                                for (let k = 0; k < this.generalCart[j]['cart']; k++) {
+                                for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
                                     if (this.generalCart[j]['cart'][k]['product'] === product) {
                                         isProductInShopIncludes = true;
                                         break;
@@ -62,7 +62,7 @@ const ConsumerNamespace = {
                         // Добавляем товар в корзину.
                         for (let j = 0; j < this.generalCart.length; j++) {
                             if (this.generalCart[j]['shop'] === shop) {
-                                for (let k = 0; k < this.generalCart[j]['cart']; k++) {
+                                for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
                                     if (this.generalCart[j]['cart'][k]['product'] === product) {
                                         this.generalCart[j]['cart'][k]['quantity'] += quantity;
                                         shop.catalog[i]['quantityInCart'] += quantity;
@@ -127,32 +127,39 @@ const ConsumerNamespace = {
 
         // public
         buyProducts() {
-            let totalCost = 0;
-            for (let i = 0; i < this.generalCart.length; i++) {
-                for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                    totalCost += this.generalCart[i]['cart'][i]['product'].price * this.generalCart[i]['cart'][i]['quantity'];
-                }
-            }
-            if (this.money >= totalCost) {
+            if (this.generalCart.length !== 0) {
+                let unitCost = 0;
+                let totalCost = 0;
                 for (let i = 0; i < this.generalCart.length; i++) {
                     for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                        for (let k = 0; k < this.generalCart[i]['shop'].catalog.length; k++) {
-                            if (this.generalCart[i]['cart'][i]['product'] === this.generalCart[i]['shop'].catalog[k]['product']) {
-                                this.generalCart[i]['shop'].catalog[k]['quantityInCart'] -= this.generalCart[i]['cart'][i]['quantity'];
-                                this.generalCart[i]['shop'].catalog[k]['totalQuantity'] -= this.generalCart[i]['cart'][i]['quantity'];
+                        unitCost = this.generalCart[i]['cart'][j]['product'].price * this.generalCart[i]['cart'][j]['quantity'];
+                        totalCost += unitCost;
+                        this.generalCart[i]['shop'].producer.money += unitCost;
+                    }
+                }
+                if (this.money >= totalCost) {
+                    for (let i = 0; i < this.generalCart.length; i++) {
+                        for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
+                            for (let k = 0; k < this.generalCart[i]['shop'].catalog.length; k++) {
+                                if (this.generalCart[i]['cart'][j]['product'] === this.generalCart[i]['shop'].catalog[k]['product']) {
+                                    this.generalCart[i]['shop'].catalog[k]['quantityInCart'] -= this.generalCart[i]['cart'][j]['quantity'];
+                                    this.generalCart[i]['shop'].catalog[k]['totalQuantity'] -= this.generalCart[i]['cart'][j]['quantity'];
+                                }
                             }
                         }
                     }
+
+                    // Мы здесь не удаляем продукты из магазина, если их quantity равно 0,
+                    // т.к. эта логика должна выполняться только в producer (плохо, когда товары продавца удаляются без его ведома).
+
+                    this.user.buyProduct(this.generalCart);
+                    this.generalCart.splice(0, this.generalCart.length);
+                    console.log(`Пользователь "${this.user.name}" успешно оплатил все продукты из корзины за ${totalCost} рублей.`);
+                } else {
+                    throw new Error(`Пользователь "${this.user.name}" не может оплатить все продукты из корзины за ${totalCost} рублей, так как сумма покупки больше, чем есть на счету для покупок у пользователя.`);
                 }
-
-                // Мы здесь не удаляем продукты из магазина, если их quantity равно 0,
-                // т.к. эта логика должна выполняться только в producer (плохо, когда товары продавца удаляются без его ведома).
-
-                this.user.buyProduct(this.generalCart);
-                this.generalCart.splice(0, this.generalCart.length);
-                console.log(`Все товары из корзины успешно куплены. Пользователь "${this.user.name}" заплатил ${totalCost} рублей.`);
             } else {
-                throw new Error(`Товары из корзины не удалось купить. Пользователь "${this.user.name}" не смог заплатить ${totalCost} рублей магазину, так как сумма покупки больше, чем есть на счету для покупок у пользователя.`);
+                throw new Error(`Невозможно совершить покупку, так как корзина пользователя "${this.user.name}" пуста.`);
             }
         }
     }

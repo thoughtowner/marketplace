@@ -1,6 +1,6 @@
 const UserNamespace = {
     User: class {
-        constructor(name, password, isConsumer=null, isProducer=null) {
+        constructor(name, password, isConsumer, isProducer) {
             this.isConsumer = isConsumer || false;
             this.isProducer = isProducer || false;
             this.name = name;
@@ -8,8 +8,9 @@ const UserNamespace = {
             this.boughtProducts = [];
         }
 
+        // Нужно исправить, потому что неправильно реагирует на user1.addMoneyToConsumer(producer1, 1000);.
         // private
-        checkRoleAffiliation(consumer=null, producer=null) {
+        checkRoleAffiliation(consumer=false, producer=false) {
             if (this.isConsumer) {
                 if(consumer) {
                     if (this !== consumer.user) {
@@ -33,10 +34,10 @@ const UserNamespace = {
         // private
         checkMoneyValue(money) {
             if (typeof money !== 'number') {
-                throw new Error(`Тип значения <money> должно быть <number>, а не <${typeof money}>.`);
+                throw new Error(`Тип значения <money> должно быть <number>.`);
             } else {
                 if (money < 0) {
-                    throw new Error(`Значение <money> должно быть больше или равно нулю, а не ${money}.`);
+                    throw new Error(`Значение <money> должно быть больше или равно нулю.`);
                 }
             }
         }
@@ -51,7 +52,7 @@ const UserNamespace = {
 
         // public
         reduceMoneyFromProducer(producer, money) {
-            this.checkRoleAffiliation(producer);
+            this.checkRoleAffiliation(undefined, producer);
             this.checkMoneyValue(money);
             if (producer.money >= money) {
                 producer.reduceMoney(money);
@@ -63,8 +64,11 @@ const UserNamespace = {
 
         // private
         buyProduct(generalCart) {
+            let product, quantity;
             for (let i = 0; i < generalCart.length; i++) {
                 for (let j = 0; j < generalCart[i]['cart'].length; j++) {
+                    product = generalCart[i]['cart'][j]['product'];
+                    quantity = generalCart[i]['cart'][j]['quantity'];
 
                     // Добавляем данные инициализации для товара, если их нет.
                     let isProductIncludes = false;
@@ -75,7 +79,7 @@ const UserNamespace = {
                         }
                     }
                     if (!isProductIncludes) {
-                        this.globalCart.push({ 'product': product, 'quantity': 0 });
+                        this.boughtProducts.push({ 'product': product, 'quantity': 0 });
                     }
 
                     // Добавляем товар к купленным товарам.
