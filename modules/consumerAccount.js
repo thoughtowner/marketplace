@@ -1,37 +1,23 @@
-const ConsumerNamespace = {
-    Consumer: class {
-        constructor(user) {
-            this.user = user;
+const ConsumerAccountNamespace = {
+    ConsumerAccount: class {
+        constructor() {
             this.money = 0;
             this.generalCart = [];
         }
 
-        // private
-        checkQuantityValue(quantity) {
-            if (typeof quantity !== 'number') {
-                throw new Error(`Тип значения <quantity> должно быть <number>.`);
-            } else {
-                if (quantity <= 0) {
-                    throw new Error(`Значение <quantity> должно быть больше нуля.`);
-                }
-            }
-        }
-
-        // private
+        // internal
         addMoney(money) {
             this.money += money;
         }
 
-        // public
-        putProduct(shop, product, quantity) {
-            this.checkQuantityValue(quantity);
+        // internal
+        putProduct(userName, shop, product, quantity) {
             let isProductExists = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 if (shop.catalog[i]['product'] === product) {
                     isProductExists = true;
-                    if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCart']) {
+                    if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
 
-                        // Добавляем данные инициализации для магазина, если их нет.
                         let isShopIncludes = false;
                         for (let j = 0; j < this.generalCart.length; j++) {
                             if (this.generalCart[j]['shop'] === shop) {
@@ -43,7 +29,6 @@ const ConsumerNamespace = {
                             this.generalCart.push({ 'shop': shop, 'cart': [] });
                         }
 
-                        // Добавляем данные инициализации для товара, если их нет.
                         let isProductInShopIncludes = false;
                         for (let j = 0; j < this.generalCart.length; j++) {
                             if (this.generalCart[j]['shop'] === shop) {
@@ -59,14 +44,13 @@ const ConsumerNamespace = {
                             }
                         }
 
-                        // Добавляем товар в корзину.
                         for (let j = 0; j < this.generalCart.length; j++) {
                             if (this.generalCart[j]['shop'] === shop) {
                                 for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
                                     if (this.generalCart[j]['cart'][k]['product'] === product) {
                                         this.generalCart[j]['cart'][k]['quantity'] += quantity;
-                                        shop.catalog[i]['quantityInCart'] += quantity;
-                                        console.log(`Пользователь "${this.user.name}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
+                                        shop.catalog[i]['quantityInCarts'] += quantity;
+                                        console.log(`Пользователь "${userName}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
                                         break;
                                     }
                                 }
@@ -74,7 +58,7 @@ const ConsumerNamespace = {
                             }
                         }
                     } else {
-                        throw new Error(`Пользователь "${this.user.name}" не может положить в корзину товар "${product.title}" в количестве ${quantity} штук из магазина "${shop.title}", так как в магазине недостаточно этого товара.`);
+                        throw new Error(`Пользователь "${userName}" не может положить в корзину товар "${product.title}" в количестве ${quantity} штук из магазина "${shop.title}", так как в магазине недостаточно этого товара.`);
                     }
                     break;
                 }
@@ -84,9 +68,8 @@ const ConsumerNamespace = {
             }
         }
 
-        // public
-        putOutProduct(shop, product, quantity) {
-            this.checkQuantityValue(quantity);
+        // internal
+        putOutProduct(userName, shop, product, quantity) {
             let isProductExists = false;
             for (let i = 0; i < this.generalCart.length; i++) {
                 if (this.generalCart[i]['shop'] === shop) {
@@ -97,9 +80,8 @@ const ConsumerNamespace = {
                                 for (let k = 0; k < shop.catalog.length; k++) {
                                     if (shop.catalog[k]['product'] === product) {
                                         this.generalCart[i]['cart'][j]['quantity'] -= quantity;
-                                        shop.catalog[k]['quantityInCart'] -= quantity;
+                                        shop.catalog[k]['quantityInCarts'] -= quantity;
 
-                                        // Удаляем продукт из корзины, если его quantity равно 0 и удаляем корзину, если в ней нет продуктов.
                                         if (this.generalCart[i]['cart'][j]['quantity'] === 0) {
                                             this.generalCart[i]['cart'].splice(j, 1);
                                             if (this.generalCart[i]['cart'].length === 0) {
@@ -107,12 +89,12 @@ const ConsumerNamespace = {
                                             }
                                         }
 
-                                        console.log(`Пользователь "${this.user.name}" выложил из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}".`);
+                                        console.log(`Пользователь "${userName}" выложил из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}".`);
                                         break;
                                     }
                                 }
                             } else {
-                                throw new Error(`Пользователь "${this.user.name}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}", так как в корзине пользователя меньшее количество товара, чем он хотел бы выложить.`);
+                                throw new Error(`Пользователь "${userName}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}", так как в корзине пользователя меньшее количество товара, чем он хотел бы выложить.`);
                             }
                             break;
                         }
@@ -121,12 +103,12 @@ const ConsumerNamespace = {
                 }
             }
             if (!isProductExists) {
-                throw new Error(`Товар "${product.title}" не найден в корзине пользователя "${this.user.name}".`);
+                throw new Error(`Товар "${product.title}" не найден в корзине пользователя "${userName}".`);
             }
         }
 
-        // public
-        buyProducts() {
+        // internal
+        buyProducts(userName) {
             if (this.generalCart.length !== 0) {
                 let unitCost = 0;
                 let totalCost = 0;
@@ -134,35 +116,33 @@ const ConsumerNamespace = {
                     for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
                         unitCost = this.generalCart[i]['cart'][j]['product'].price * this.generalCart[i]['cart'][j]['quantity'];
                         totalCost += unitCost;
-                        this.generalCart[i]['shop'].producer.money += unitCost;
+                        this.generalCart[i]['shop'].producerAccount.money += unitCost;
                     }
                 }
                 if (this.money >= totalCost) {
+
                     for (let i = 0; i < this.generalCart.length; i++) {
                         for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
                             for (let k = 0; k < this.generalCart[i]['shop'].catalog.length; k++) {
                                 if (this.generalCart[i]['cart'][j]['product'] === this.generalCart[i]['shop'].catalog[k]['product']) {
-                                    this.generalCart[i]['shop'].catalog[k]['quantityInCart'] -= this.generalCart[i]['cart'][j]['quantity'];
+                                    this.generalCart[i]['shop'].catalog[k]['quantityInCarts'] -= this.generalCart[i]['cart'][j]['quantity'];
                                     this.generalCart[i]['shop'].catalog[k]['totalQuantity'] -= this.generalCart[i]['cart'][j]['quantity'];
                                 }
                             }
                         }
                     }
 
-                    // Мы здесь не удаляем продукты из магазина, если их quantity равно 0,
-                    // т.к. эта логика должна выполняться только в producer (плохо, когда товары продавца удаляются без его ведома).
-
-                    this.user.buyProduct(this.generalCart);
-                    this.generalCart.splice(0, this.generalCart.length);
-                    console.log(`Пользователь "${this.user.name}" успешно оплатил все продукты из корзины за ${totalCost} рублей.`);
+                    this.user.transferProductsFromCartToOwned();
+                    this.money -= totalCost;
+                    console.log(`Пользователь "${userName}" успешно оплатил все продукты из корзины за ${totalCost} рублей.`);
                 } else {
-                    throw new Error(`Пользователь "${this.user.name}" не может оплатить все продукты из корзины за ${totalCost} рублей, так как сумма покупки больше, чем есть на счету для покупок у пользователя.`);
+                    throw new Error(`Пользователь "${userName}" не может оплатить все продукты из корзины за ${totalCost} рублей, так как сумма покупки больше, чем есть на счету для покупок у пользователя.`);
                 }
             } else {
-                throw new Error(`Невозможно совершить покупку, так как корзина пользователя "${this.user.name}" пуста.`);
+                throw new Error(`Невозможно совершить покупку, так как корзина пользователя "${userName}" пуста.`);
             }
         }
     }
 }
 
-export default ConsumerNamespace;
+export default ConsumerAccountNamespace;

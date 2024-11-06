@@ -1,33 +1,33 @@
+import ConsumerAccountNamespace from './consumerAccount.js';
+import ProducerAccountNamespace from './producerAccount.js';
+
 const UserNamespace = {
     User: class {
-        constructor(name, password, isConsumer, isProducer) {
-            this.isConsumer = isConsumer || false;
-            this.isProducer = isProducer || false;
+        constructor(name, password, role, title=null) {
             this.name = name;
             this.password = password;
-            this.boughtProducts = [];
+            this.ownedProducts = [];
+            if (role === 'consumerAccount') {
+                this.consumerAccount = new ConsumerAccountNamespace.ConsumerAccount();
+                this.producerAccount = null;
+            } else if (role === 'producerAccount') {
+                this.producerAccount = new ProducerAccountNamespace.ProducerAccount(title);
+                this.consumerAccount = null;
+            }
         }
 
-        // Нужно исправить, потому что неправильно реагирует на user1.addMoneyToConsumer(producer1, 1000);.
         // private
-        checkRoleAffiliation(consumer=false, producer=false) {
-            if (this.isConsumer) {
-                if(consumer) {
-                    if (this !== consumer.user) {
-                        throw new Error(`Покупатель не соответствует пользователю "${this.name}", так как он привязан к другому пользователю.`);
-                    }
-                } else {
-                    throw new Error(`Невозможно выполнить метод, так как пользователь не является продавцом.`);
+        checkRoleAffiliation(role) {
+            if (role === 'consumerAccount') {
+                if (!this.consumerAccount) {
+                    throw new Error(`Невозможно выполнить метод, так как пользователь не имеет счёта для покупок.`);
                 }
-            }
-            else if (this.isProducer) {
-                if(producer) {
-                    if (this !== producer.user) {
-                        throw new Error(`Продавец не соответствует пользователю "${this.name}", так как он привязан к другому пользователю.`);
-                    }
-                } else {
-                    throw new Error(`Невозможно выполнить метод, так как пользователь не является покупателем.`);
+            } else if (role === 'producerAccount') {
+                if (!this.producerAccount) {
+                    throw new Error(`Невозможно выполнить метод, так как пользователь не имеет счёта для продаж.`);
                 }
+            } else {
+                throw new Error(`Невозможно выполнить метод, так как введена неверная роль.`);
             }
         }
 
@@ -42,55 +42,85 @@ const UserNamespace = {
             }
         }
 
-        // public
-        addMoneyToConsumer(consumer, money) {
-            this.checkRoleAffiliation(consumer);
-            this.checkMoneyValue(money);
-            consumer.addMoney(money);
-            console.log(`Пользователь "${this.name}" положил на счёт для покупок ${money} рублей.`);
+        // private
+        checkQuantityValue(quantity) {
+            if (typeof quantity !== 'number') {
+                throw new Error(`Тип значения <quantity> должно быть <number>.`);
+            } else {
+                if (quantity <= 0) {
+                    throw new Error(`Значение <quantity> должно быть больше нуля.`);
+                }
+            }
         }
 
         // public
-        reduceMoneyFromProducer(producer, money) {
-            this.checkRoleAffiliation(undefined, producer);
+        addMoneyToConsumerAccount(money) {
+            this.checkRoleAffiliation('consumerAccount');
             this.checkMoneyValue(money);
-            if (producer.money >= money) {
-                producer.reduceMoney(money);
+            this.consumerAccount.addMoney(this.name, money);
+            console.log(`Пользователь "${userName}" положил на счёт для покупок ${money} рублей.`);
+        }
+
+        // public
+        reduceMoneyFromProducerAccount(money) {
+            this.checkRoleAffiliation('producerAccount');
+            this.checkMoneyValue(money);
+            if (this.producerAccount.money >= money) {
+                this.producerAccount.reduceMoney(this.name, money);
                 console.log(`Пользователь "${this.name}" снял со счёта для продаж ${money} рублей.`);
             } else {
                 throw new Error(`Пользователь "${this.name}" не может снять со счёта для продаж ${money} рублей, так как на счёте для продаж недостаточно средств для этого.`);
             }
         }
 
-        // private
-        buyProduct(generalCart) {
-            let product, quantity;
-            for (let i = 0; i < generalCart.length; i++) {
-                for (let j = 0; j < generalCart[i]['cart'].length; j++) {
-                    product = generalCart[i]['cart'][j]['product'];
-                    quantity = generalCart[i]['cart'][j]['quantity'];
+        // public
+        putProduct(shop, product, quantity) {
+            this.checkRoleAffiliation('consumerAccount');
+            this.checkQuantityValue(quantity);
+            this.consumerAccount.putProduct(this.name, shop, product, quantity);
+        }
 
-                    // Добавляем данные инициализации для товара, если их нет.
+        // public
+        putOutProduct(shop, product, quantity) {
+            this.checkRoleAffiliation('consumerAccount');
+            this.checkQuantityValue(quantity);
+            this.consumerAccount.putOutProduct(this.name, shop, product, quantity);
+        }
+
+        // internal
+        transferProductsFromCartToOwned() {
+            let product, quantity;
+            for (let i = 0; i < this.consumerAccount.generalCart.length; i++) {
+                for (let j = 0; j < this.consumerAccount.generalCart[i]['cart'].length; j++) {
+                    product = this.consumerAccount.generalCart[i]['cart'][j]['product'];
+                    quantity = this.consumerAccount.generalCart[i]['cart'][j]['quantity'];
+
                     let isProductIncludes = false;
-                    for (let k = 0; k < this.boughtProducts.length; k++) {
-                        if (this.boughtProducts[k]['product'] === product) {
+                    for (let k = 0; k < this.ownedProducts.length; k++) {
+                        if (this.ownedProducts[k]['product'] === product) {
                             isProductIncludes = true;
                             break;
                         }
                     }
                     if (!isProductIncludes) {
-                        this.boughtProducts.push({ 'product': product, 'quantity': 0 });
+                        this.ownedProducts.push({ 'product': product, 'quantity': 0 });
                     }
 
-                    // Добавляем товар к купленным товарам.
-                    for (let k = 0; k < this.boughtProducts.length; k++) {
-                        if (this.boughtProducts[k]['product'] === product) {
-                            this.boughtProducts[k]['quantity'] += quantity;
+                    for (let k = 0; k < this.ownedProducts.length; k++) {
+                        if (this.ownedProducts[k]['product'] === product) {
+                            this.ownedProducts[k]['quantity'] += quantity;
                             break;
                         }
                     }
                 }
             }
+            this.consumerAccount.generalCart.splice(0, this.generalCart.length);
+        }
+
+        // public
+        buyProducts() {
+            this.checkRoleAffiliation('consumerAccount');
+            this.consumerAccount.buyProducts(this.name);
         }
     }
 }

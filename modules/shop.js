@@ -1,7 +1,6 @@
 const ShopNamespace = {
     Shop: class {
-        constructor(producer, title) {
-            this.producer = producer;
+        constructor(title) {
             this.title = title;
             this.catalog = [];
         }
