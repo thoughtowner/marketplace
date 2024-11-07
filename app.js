@@ -1,11 +1,12 @@
 import express from 'express';
 import pg from 'pg';
 import cors from 'cors';
-import ConsumerAccountNamespace from './modules/consumerAccount.js';
+import ConsumerNamespace from './modules/consumer.js';
 import ProductNamespace from './modules/product.js';
 
 import bcrypt from 'bcrypt';
 import bodyParser from 'body-parser';
+import UserNamespace from './modules/user.js';
 
 
 const { Pool } = pg;
@@ -14,6 +15,16 @@ const pool = new Pool(
         'user': 'postgres',
         'host': 'localhost',
         'database': '',
+        'password': 'postgres',
+        'port': 7960,
+    }
+);
+
+const testPool = new Pool(
+    {
+        'user': 'postgres',
+        'host': 'localhost',
+        'database': 'marketplace-test-db',
         'password': 'postgres',
         'port': 7961,
     }
@@ -27,6 +38,17 @@ app.use(cors());
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.post('/test', async (req, res) => {
+    const { userId, consumerId } = req.body;
+    const consumerData = await ConsumerNamespace.findById(testPool, consumerId);
+    const userData = await UserNamespace.findById(testPool, userId);
+    let consumerInstance = new ConsumerNamespace.Consumer(consumerData.id, consumerData.money);
+    let userInstance = new UserNamespace.User(userData.id, userData.name, userData.password, 'consumer', consumerData.id);
+    userInstance.addMoneyToConsumer(500);
+    console.log(consumerInstance.money);
+    res.json(test);
+});
 
 app.get('/register', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/js-lessons/24-09-2024/alpha/register.html');
@@ -108,20 +130,20 @@ app.get('/products', async (req, res) => {
 
 app.get('/consumers', async (req, res) => {
     let result = [];
-    let productToConsumerAccountDataFromDB, productDataFromDB;
+    let productToConsumerDataFromDB, productDataFromDB;
     const consumersDataFromDB = await pool.query('SELECT * FROM consumers;');
     for (let i = 0; i < consumersDataFromDB.rows.length; i++) {
         result.push({ 'consumer': consumersDataFromDB.rows[i], 'cart': [] });
-        productToConsumerAccountDataFromDB = await pool.query(
+        productToConsumerDataFromDB = await pool.query(
             'SELECT * FROM product_to_consumer WHERE consumer_id = $1;',
             [consumersDataFromDB.rows[i].id]
         );
-        for (let j = 0; j < productToConsumerAccountDataFromDB.rows.length; j++) {
+        for (let j = 0; j < productToConsumerDataFromDB.rows.length; j++) {
             productDataFromDB = await pool.query(
                 'SELECT * FROM products WHERE id = $1;',
-                [productToConsumerAccountDataFromDB.rows[j].product_id]
+                [productToConsumerDataFromDB.rows[j].product_id]
             );
-            result[i].products.push({ 'product': productDataFromDB.rows[0], 'quantity': productToConsumerAccountDataFromDB.rows[j].quantity });
+            result[i].products.push({ 'product': productDataFromDB.rows[0], 'quantity': productToConsumerDataFromDB.rows[j].quantity });
         }
     }
     res.status(200).json(result);
@@ -179,7 +201,7 @@ app.put('/consumers/addMoney/:consumerID', async (req, res) => {
             );
             if (consumerDataFromDB.rowCount > 0) {
                 const consumerData = consumerDataFromDB.rows[0];
-                const consumerInstance = new ConsumerAccountNamespace.ConsumerAccount(consumerData.money);
+                const consumerInstance = new ConsumerNamespace.Consumer(consumerData.money);
                 consumerInstance.addMoney(money);
                 const result = await pool.query(
                     'UPDATE consumers SET money = $1 WHERE id = $2 RETURNING *;',
@@ -215,7 +237,7 @@ app.put('/consumers/putProduct/:consumerID', async (req, res) => {
             if (productDataFromDB.rowCount > 0) {
                 let consumerData = consumerDataFromDB.rows[0];
                 const productData = productDataFromDB.rows[0];
-                let productToConsumerAccountDataFromDB = await pool.query(
+                let productToConsumerDataFromDB = await pool.query(
                     'SELECT * FROM product_to_consumer WHERE consumer_id = $1 AND product_id = $2;',
                     [consumerData.id, productData.id]
                 );
@@ -224,10 +246,10 @@ app.put('/consumers/putProduct/:consumerID', async (req, res) => {
 
                 let consumerProductsFromDB = [];
                 let consumerProductDataFromDB;
-                for (let i = 0; i < productToConsumerAccountDataFromDB.rows.length; i++) {
+                for (let i = 0; i < productToConsumerDataFromDB.rows.length; i++) {
                     consumerProductDataFromDB = await pool.query(
                         'SELECT * FROM products WHERE id = $1;',
-                        [productToConsumerAccountDataFromDB.rows[i].product_id]
+                        [productToConsumerDataFromDB.rows[i].product_id]
                     );
                     consumerProductsFromDB.push(consumerProductDataFromDB.rows[0]);
                 }
@@ -236,16 +258,16 @@ app.put('/consumers/putProduct/:consumerID', async (req, res) => {
                 let consumerProductInstance;
                 for (let i = 0; i < consumerProductsFromDB.length; i++) {
                     consumerProductInstance = new ProductNamespace.Product(consumerProductsFromDB[i].title, consumerProductsFromDB[i].price);
-                    consumerProducts.push({ 'product': consumerProductInstance, 'quantity': productToConsumerAccountDataFromDB.rows[i].quantity });
+                    consumerProducts.push({ 'product': consumerProductInstance, 'quantity': productToConsumerDataFromDB.rows[i].quantity });
                 }
 
-                let consumerInstance = new ConsumerAccountNamespace.ConsumerAccount(consumerData.money, consumerProducts);
+                let consumerInstance = new ConsumerNamespace.Consumer(consumerData.money, consumerProducts);
 
                 consumerInstance.putProduct(productInstance, quantity);
                 consumerData.quantity = consumerInstance.cart.find(function (element) { return element.product.title === productInstance.title; }).quantity;
 
                 let putProduct;
-                if (productToConsumerAccountDataFromDB.rowCount > 0) {
+                if (productToConsumerDataFromDB.rowCount > 0) {
                     putProduct = await pool.query(
                         'UPDATE product_to_consumer SET quantity = $1 WHERE consumer_id = $2 AND product_id = $3 RETURNING *;',
                         [consumerData.quantity, consumerData.id, productData.id]
@@ -257,29 +279,29 @@ app.put('/consumers/putProduct/:consumerID', async (req, res) => {
                     );
                 }
 
-                // res.json({ 'productToConsumerAccount': putProduct.rows[0] });
-                res.json({ 'productToConsumerAccount': consumerInstance });
+                // res.json({ 'productToConsumer': putProduct.rows[0] });
+                res.json({ 'productToConsumer': consumerInstance });
 
                 // Получить consumer из бд
 
-                // productToConsumerAccountDataFromDB = await pool.query(
+                // productToConsumerDataFromDB = await pool.query(
                 //     'SELECT * FROM product_to_consumer WHERE consumer_id = $1 AND product_id = $2;',
                 //     [consumerData.id, productData.id]
                 // );
                 // consumerProductsFromDB.splice(0, consumerProductsFromDB.length);
                 // consumerProducts.splice(0, consumerProducts.length);
-                // for (let i = 0; i < productToConsumerAccountDataFromDB.rows.length; i++) {
+                // for (let i = 0; i < productToConsumerDataFromDB.rows.length; i++) {
                 //     consumerProductDataFromDB = await pool.query(
                 //         'SELECT * FROM products WHERE id = $1;',
-                //         [productToConsumerAccountDataFromDB.rows[i].product_id]
+                //         [productToConsumerDataFromDB.rows[i].product_id]
                 //     );
                 //     consumerProductsFromDB.push(consumerProductDataFromDB.rows[0]);
                 // }
                 // for (let i = 0; i < consumerProductsFromDB.length; i++) {
                 //     consumerProductInstance = new ProductNamespace.Product(consumerProductsFromDB[i].title, consumerProductsFromDB[i].price);
-                //     consumerProducts.push({ 'product': consumerProductInstance, 'quantity': productToConsumerAccountDataFromDB.rows[i].quantity });
+                //     consumerProducts.push({ 'product': consumerProductInstance, 'quantity': productToConsumerDataFromDB.rows[i].quantity });
                 // }
-                // consumerInstance = new ConsumerAccountNamespace.ConsumerAccount(consumerData.money, consumerProducts);
+                // consumerInstance = new ConsumerNamespace.Consumer(consumerData.money, consumerProducts);
 
 
                 // res.json({ 'consumer': consumerInstance });

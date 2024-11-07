@@ -1,7 +1,7 @@
 import ShopNamespace from './shop.js';
 
-const ProducerAccountNamespace = {
-    ProducerAccount: class {
+const ProducerNamespace = {
+    Producer: class {
         constructor(title) {
             this.money = 0;
             this.shop = new ShopNamespace.Shop(title);
@@ -89,4 +89,4 @@ const ProducerAccountNamespace = {
     }
 }
 
-export default ProducerAccountNamespace;
+export default ProducerNamespace;

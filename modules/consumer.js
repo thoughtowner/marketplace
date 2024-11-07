@@ -1,8 +1,9 @@
-const ConsumerAccountNamespace = {
-    ConsumerAccount: class {
-        constructor() {
-            this.money = 0;
-            this.generalCart = [];
+const ConsumerNamespace = {
+    Consumer: class {
+        constructor(id, money=null, generalCart=null) {
+            this.id = id;
+            this.money = money || 0;
+            this.generalCart = generalCart || [];
         }
 
         // internal
@@ -116,7 +117,7 @@ const ConsumerAccountNamespace = {
                     for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
                         unitCost = this.generalCart[i]['cart'][j]['product'].price * this.generalCart[i]['cart'][j]['quantity'];
                         totalCost += unitCost;
-                        this.generalCart[i]['shop'].producerAccount.money += unitCost;
+                        this.generalCart[i]['shop'].producer.money += unitCost;
                     }
                 }
                 if (this.money >= totalCost) {
@@ -142,7 +143,18 @@ const ConsumerAccountNamespace = {
                 throw new Error(`Невозможно совершить покупку, так как корзина пользователя "${userName}" пуста.`);
             }
         }
+    },
+
+    async findById(pool, consumerId) {
+        const result = await pool.query(
+            'SELECT * FROM consumers WHERE id = $1',
+            [consumerId]
+        );
+        if (result.rows.length > 0) {
+            return result.rows[0];
+        }
+        return null;
     }
 }
 
-export default ConsumerAccountNamespace;
+export default ConsumerNamespace;

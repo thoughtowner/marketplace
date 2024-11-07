@@ -1,29 +1,30 @@
-import ConsumerAccountNamespace from './consumerAccount.js';
-import ProducerAccountNamespace from './producerAccount.js';
+import ConsumerNamespace from "./consumer.js";
+import PoolNamespace from "./pool.js";
 
 const UserNamespace = {
     User: class {
-        constructor(name, password, role, title=null) {
+        constructor(id, name, password, role, roleId) {
+            this.id = id;
             this.name = name;
             this.password = password;
             this.ownedProducts = [];
-            if (role === 'consumerAccount') {
-                this.consumerAccount = new ConsumerAccountNamespace.ConsumerAccount();
-                this.producerAccount = null;
-            } else if (role === 'producerAccount') {
-                this.producerAccount = new ProducerAccountNamespace.ProducerAccount(title);
-                this.consumerAccount = null;
+            if (role === 'consumer') {
+                this.consumerId = roleId;
+                this.producerId = null;
+            } else if (role === 'producer') {
+                this.producerId = roleId;
+                this.consumerId = null;
             }
         }
 
         // private
         checkRoleAffiliation(role) {
-            if (role === 'consumerAccount') {
-                if (!this.consumerAccount) {
+            if (role === 'consumer') {
+                if (!this.consumerId) {
                     throw new Error(`Невозможно выполнить метод, так как пользователь не имеет счёта для покупок.`);
                 }
-            } else if (role === 'producerAccount') {
-                if (!this.producerAccount) {
+            } else if (role === 'producer') {
+                if (!this.producerId) {
                     throw new Error(`Невозможно выполнить метод, так как пользователь не имеет счёта для продаж.`);
                 }
             } else {
@@ -54,19 +55,20 @@ const UserNamespace = {
         }
 
         // public
-        addMoneyToConsumerAccount(money) {
-            this.checkRoleAffiliation('consumerAccount');
+        addMoneyToConsumer(money) {
+            this.checkRoleAffiliation('consumer');
             this.checkMoneyValue(money);
-            this.consumerAccount.addMoney(this.name, money);
+            let consumer = ConsumerNamespace.findById(PoolNamespace.getTestPool(), this.consumerId);
+            consumer.addMoney(money);
             console.log(`Пользователь "${userName}" положил на счёт для покупок ${money} рублей.`);
         }
 
         // public
-        reduceMoneyFromProducerAccount(money) {
-            this.checkRoleAffiliation('producerAccount');
+        reduceMoneyFromProducer(money) {
+            this.checkRoleAffiliation('producer');
             this.checkMoneyValue(money);
-            if (this.producerAccount.money >= money) {
-                this.producerAccount.reduceMoney(this.name, money);
+            if (this.producerId.money >= money) {
+                this.producerId.reduceMoney(money);
                 console.log(`Пользователь "${this.name}" снял со счёта для продаж ${money} рублей.`);
             } else {
                 throw new Error(`Пользователь "${this.name}" не может снять со счёта для продаж ${money} рублей, так как на счёте для продаж недостаточно средств для этого.`);
@@ -75,25 +77,25 @@ const UserNamespace = {
 
         // public
         putProduct(shop, product, quantity) {
-            this.checkRoleAffiliation('consumerAccount');
+            this.checkRoleAffiliation('consumer');
             this.checkQuantityValue(quantity);
-            this.consumerAccount.putProduct(this.name, shop, product, quantity);
+            this.consumerId.putProduct(this.name, shop, product, quantity);
         }
 
         // public
         putOutProduct(shop, product, quantity) {
-            this.checkRoleAffiliation('consumerAccount');
+            this.checkRoleAffiliation('consumer');
             this.checkQuantityValue(quantity);
-            this.consumerAccount.putOutProduct(this.name, shop, product, quantity);
+            this.consumerId.putOutProduct(this.name, shop, product, quantity);
         }
 
         // internal
         transferProductsFromCartToOwned() {
             let product, quantity;
-            for (let i = 0; i < this.consumerAccount.generalCart.length; i++) {
-                for (let j = 0; j < this.consumerAccount.generalCart[i]['cart'].length; j++) {
-                    product = this.consumerAccount.generalCart[i]['cart'][j]['product'];
-                    quantity = this.consumerAccount.generalCart[i]['cart'][j]['quantity'];
+            for (let i = 0; i < this.consumerId.generalCart.length; i++) {
+                for (let j = 0; j < this.consumerId.generalCart[i]['cart'].length; j++) {
+                    product = this.consumerId.generalCart[i]['cart'][j]['product'];
+                    quantity = this.consumerId.generalCart[i]['cart'][j]['quantity'];
 
                     let isProductIncludes = false;
                     for (let k = 0; k < this.ownedProducts.length; k++) {
@@ -114,14 +116,25 @@ const UserNamespace = {
                     }
                 }
             }
-            this.consumerAccount.generalCart.splice(0, this.generalCart.length);
+            this.consumerId.generalCart.splice(0, this.generalCart.length);
         }
 
         // public
         buyProducts() {
-            this.checkRoleAffiliation('consumerAccount');
-            this.consumerAccount.buyProducts(this.name);
+            this.checkRoleAffiliation('consumer');
+            this.consumerId.buyProducts(this.name);
         }
+    },
+
+    async findById(pool, userId) {
+        const result = await pool.query(
+            'SELECT * FROM users WHERE id = $1',
+            [userId]
+        );
+        if (result.rows.length > 0) {
+            return result.rows[0];
+        }
+        return null;
     }
 }
 
