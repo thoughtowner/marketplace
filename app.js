@@ -1,34 +1,28 @@
 import express from 'express';
 import pg from 'pg';
 import cors from 'cors';
+
+import UserNamespace from './modules/user.js';
 import ConsumerNamespace from './modules/consumer.js';
+import ProducerNamespace from './modules/producer.js';
 import ProductNamespace from './modules/product.js';
+import PoolNamespace from './modules/pool.js';
+import DelayNamespace from './modules/delay.js';
 
 import bcrypt from 'bcrypt';
 import bodyParser from 'body-parser';
-import UserNamespace from './modules/user.js';
 
 
-const { Pool } = pg;
-const pool = new Pool(
-    {
-        'user': 'postgres',
-        'host': 'localhost',
-        'database': '',
-        'password': 'postgres',
-        'port': 7960,
-    }
-);
-
-const testPool = new Pool(
-    {
-        'user': 'postgres',
-        'host': 'localhost',
-        'database': 'marketplace-test-db',
-        'password': 'postgres',
-        'port': 7961,
-    }
-);
+// const { Pool } = pg;
+// const pool = new Pool(
+//     {
+//         'user': 'postgres',
+//         'host': 'localhost',
+//         'database': '',
+//         'password': 'postgres',
+//         'port': 7960,
+//     }
+// );
 
 const app = express();
 const port = 8000;
@@ -39,15 +33,14 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.post('/test', async (req, res) => {
-    const { userId, consumerId } = req.body;
-    const consumerData = await ConsumerNamespace.findById(testPool, consumerId);
-    const userData = await UserNamespace.findById(testPool, userId);
-    let consumerInstance = new ConsumerNamespace.Consumer(consumerData.id, consumerData.money);
-    let userInstance = new UserNamespace.User(userData.id, userData.name, userData.password, 'consumer', consumerData.id);
-    userInstance.addMoneyToConsumer(500);
-    console.log(consumerInstance.money);
-    res.json(test);
+app.post('/test/:userID', async (req, res) => {
+    const { userID } = req.params;
+    const { money } = req.body;
+    const userInstance = await UserNamespace.getInstanceById(PoolNamespace.pool, userID);
+    await userInstance.addMoneyToConsumer(money);
+    await DelayNamespace.delay(100);
+    let consumerInstance = await ConsumerNamespace.getInstanceById(PoolNamespace.pool, userInstance.consumerId);
+    res.status(200).json({ consumerMoney: consumerInstance.money });
 });
 
 app.get('/register', (req, res) => {
@@ -121,6 +114,46 @@ app.post('/login', async (req, res) => {
 
 app.get('/', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/js-lessons/24-09-2024/alpha/index.html');
+});
+
+app.post('/users/addMoneyToConsumer/:userID', async (req, res) => {
+    const { userID } = req.params;
+    const { money } = req.body;
+
+    try {
+        if (userID && money) {
+            const userInstance = await UserNamespace.getInstanceById(PoolNamespace.pool, userID);
+            await userInstance.addMoneyToConsumer(money);
+            await DelayNamespace.delay(100);
+            let consumerInstance = await ConsumerNamespace.getInstanceById(PoolNamespace.pool, userInstance.consumerId);
+            res.status(200).json({ consumerMoney: consumerInstance.money });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+app.post('/users/reduceMoneyFromProducer/:userID', async (req, res) => {
+    const { userID } = req.params;
+    const { money } = req.body;
+
+    try {
+        if (userID && money) {
+            const userInstance = await UserNamespace.getInstanceById(PoolNamespace.pool, userID);
+            await userInstance.reduceMoneyFromProducer(money);
+            await DelayNamespace.delay(100);
+            const producerInstance = await ProducerNamespace.getInstanceById(PoolNamespace.pool, userInstance.producerId);
+            res.status(200).json({ producerMoney: producerInstance.money });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 app.get('/products', async (req, res) => {
