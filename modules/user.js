@@ -1,5 +1,30 @@
 import ConsumerNamespace from "./consumer.js";
+import ProducerNamespace from "./producer.js";
 import PoolNamespace from "./pool.js";
+import ProductNamespace from "./product.js";
+
+
+// private
+function checkMoneyValue(money) {
+    if (typeof money !== 'number') {
+        throw new Error(`Тип значения <money> должно быть <number>.`);
+    } else {
+        if (money < 0) {
+            throw new Error(`Значение <money> должно быть больше или равно нулю.`);
+        }
+    }
+}
+
+// private
+function checkQuantityValue(quantity) {
+    if (typeof quantity !== 'number') {
+        throw new Error(`Тип значения <quantity> должно быть <number>.`);
+    } else {
+        if (quantity <= 0) {
+            throw new Error(`Значение <quantity> должно быть больше нуля.`);
+        }
+    }
+}
 
 const UserNamespace = {
     User: class {
@@ -32,43 +57,24 @@ const UserNamespace = {
             }
         }
 
-        // private
-        checkMoneyValue(money) {
-            if (typeof money !== 'number') {
-                throw new Error(`Тип значения <money> должно быть <number>.`);
-            } else {
-                if (money < 0) {
-                    throw new Error(`Значение <money> должно быть больше или равно нулю.`);
-                }
-            }
-        }
-
-        // private
-        checkQuantityValue(quantity) {
-            if (typeof quantity !== 'number') {
-                throw new Error(`Тип значения <quantity> должно быть <number>.`);
-            } else {
-                if (quantity <= 0) {
-                    throw new Error(`Значение <quantity> должно быть больше нуля.`);
-                }
-            }
-        }
-
         // public
-        addMoneyToConsumer(money) {
+        async addMoneyToConsumer(money) {
             this.checkRoleAffiliation('consumer');
-            this.checkMoneyValue(money);
-            let consumer = ConsumerNamespace.findById(PoolNamespace.getTestPool(), this.consumerId);
+            checkMoneyValue(money);
+            let consumer = await ConsumerNamespace.getInstanceById(PoolNamespace.pool, this.consumerId);
             consumer.addMoney(money);
-            console.log(`Пользователь "${userName}" положил на счёт для покупок ${money} рублей.`);
+            consumer.updateMoneyInDB();
+            console.log(`Пользователь "${this.name}" положил на счёт для покупок ${money} рублей.`);
         }
 
         // public
-        reduceMoneyFromProducer(money) {
+        async reduceMoneyFromProducer(money) {
             this.checkRoleAffiliation('producer');
-            this.checkMoneyValue(money);
-            if (this.producerId.money >= money) {
-                this.producerId.reduceMoney(money);
+            checkMoneyValue(money);
+            let producer = await ProducerNamespace.getInstanceById(PoolNamespace.pool, this.producerId);
+            if (producer.money >= money) {
+                producer.reduceMoney(money);
+                producer.updateMoneyInDB();
                 console.log(`Пользователь "${this.name}" снял со счёта для продаж ${money} рублей.`);
             } else {
                 throw new Error(`Пользователь "${this.name}" не может снять со счёта для продаж ${money} рублей, так как на счёте для продаж недостаточно средств для этого.`);
@@ -78,14 +84,14 @@ const UserNamespace = {
         // public
         putProduct(shop, product, quantity) {
             this.checkRoleAffiliation('consumer');
-            this.checkQuantityValue(quantity);
+            checkQuantityValue(quantity);
             this.consumerId.putProduct(this.name, shop, product, quantity);
         }
 
         // public
         putOutProduct(shop, product, quantity) {
             this.checkRoleAffiliation('consumer');
-            this.checkQuantityValue(quantity);
+            checkQuantityValue(quantity);
             this.consumerId.putOutProduct(this.name, shop, product, quantity);
         }
 
@@ -126,16 +132,104 @@ const UserNamespace = {
         }
     },
 
-    async findById(pool, userId) {
+    // async getInstanceById(pool, userId) {
+    //     const result = await pool.query(
+    //         'SELECT * FROM users WHERE id = $1',
+    //         [userId]
+    //     );
+    //     const userData = result.rows[0];
+    //     const userInstance = new this.User(userData.id, userData.name, userData.password, userData.role, userData.roleId);
+    //     return userInstance;
+    // }
+
+    async getInstanceById(pool, userId) {
+        try {
+            // Сначала проверяем, существует ли пользователь с таким ID
+            const userResult = await pool.query(
+                'SELECT * FROM users WHERE id = $1',
+                [userId]
+            );
+    
+            if (userResult.rows.length === 0) {
+                throw new Error('User not found');
+            }
+    
+            const userData = userResult.rows[0];
+
+            // Затем определяем роль пользователя (продавец или покупатель)
+            let role;
+            let roleId;
+
+            const consumerResult = await pool.query(
+                'SELECT * FROM consumers WHERE user_id = $1',
+                [userId]
+            );
+
+            const producerResult = await pool.query(
+                'SELECT * FROM producers WHERE user_id = $1',
+                [userId]
+            );
+
+            if (consumerResult.rows.length > 0) {
+                role = 'consumer';
+                roleId = consumerResult.rows[0].id;
+            } else if (producerResult.rows.length > 0) {
+                role = 'producer';
+                roleId = producerResult.rows[0].id;
+            }
+    
+            // if (await this.isUserProducer(pool, userId)) {
+            //     role = 'producer';
+            //     roleId = await this.getRoleIdByUserId(pool, userId);
+            // } else if (await this.isUserConsumer(pool, userId)) {
+            //     role = 'consumer';
+            //     roleId = await this.getRoleIdByUserId(pool, userId);
+            // } else {
+            //     throw new Error('User is neither producer nor consumer');
+            // }
+    
+            // Создаем экземпляр пользователя с учетом роли
+            const userInstance = new this.User(
+                userData.id,
+                userData.name,
+                userData.password,
+                role,
+                roleId
+            );
+    
+            return userInstance;
+        } catch (error) {
+            console.error('Error in getInstanceById:', error);
+            throw error;
+        }
+    },
+    
+    // Дополнительные вспомогательные методы
+    
+    async isUserProducer(pool, userId) {
         const result = await pool.query(
-            'SELECT * FROM users WHERE id = $1',
+            'SELECT 1 FROM producers WHERE user_id = $1 LIMIT 1',
             [userId]
         );
-        if (result.rows.length > 0) {
-            return result.rows[0];
-        }
-        return null;
-    }
+        return result.rowCount > 0;
+    },
+    
+    async isUserConsumer(pool, userId) {
+        const result = await pool.query(
+            'SELECT 1 FROM consumers WHERE user_id = $1 LIMIT 1',
+            [userId]
+        );
+        return result.rowCount > 0;
+    },
+    
+    async getRoleIdByUserId(pool, userId) {
+        const result = await pool.query(
+            'SELECT CASE WHEN EXISTS (SELECT 1 FROM producers WHERE user_id = $1) THEN 1 ELSE 2 END AS role_id FROM users WHERE id = $1',
+            [userId]
+        );
+        console.log(result.rows[0].role_id);
+        return result.rows[0].role_id;
+    },
 }
 
 export default UserNamespace;

@@ -1,3 +1,5 @@
+import PoolNamespace from "./pool.js";
+
 const ConsumerNamespace = {
     Consumer: class {
         constructor(id, money=null, generalCart=null) {
@@ -143,17 +145,113 @@ const ConsumerNamespace = {
                 throw new Error(`Невозможно совершить покупку, так как корзина пользователя "${userName}" пуста.`);
             }
         }
+
+        async updateMoneyInDB() {
+            const result = await PoolNamespace.pool.query(`
+                UPDATE consumers
+                SET
+                    money = $1
+                WHERE id = $2
+                RETURNING *
+            `, [this.money, this.id]);
+            return result.rows[0];
+        }
+
+        async updateGeneralCartInDB() {
+            let select;
+            let result;
+
+            for (let i = 0; i < this.generalCart.length; i++) {
+                for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
+                    select = await PoolNamespace.pool.query(
+                        `
+                            SELECT * FROM consumer_to_product
+                            WHERE
+                                consumer_id = $1 AND
+                                product_id = $2 AND
+                                shop_id = $3
+                        `,
+                        [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
+                    );
+
+                    if (select.rows.length > 0) {
+                        select = select.rows[0];
+                        result = await PoolNamespace.pool.query(
+                            `
+                                UPDATE consumer_to_product
+                                SET
+                                    quantity = $1
+                                WHERE
+                                    consumer_id = $2 AND
+                                    product_id = $3 AND
+                                    shop_id = $4
+                            `,
+                            [select['quantity'], select['consumer_id'], select['product_id'], select['shop_id']]
+                        );
+                    } else {
+                        result = await PoolNamespace.pool.query(
+                            `
+                                INSERT INTO consumer_to_product (consumer_id, product_id, shop_id) 
+                                VALUES ($1, $2, $3);
+                            `,
+                            [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
+                        );
+                    }
+                }
+            }
+        }
     },
 
-    async findById(pool, consumerId) {
-        const result = await pool.query(
+    // async getUserIdById(pool, consumerId) {
+    //     const result = await pool.query(
+    //         'SELECT user_id FROM consumers WHERE id = $1',
+    //         [consumerId]
+    //     );
+    //     return result.rows[0].user_id;
+    // },
+
+    async getInstanceById(consumerId) {
+        const baseResult = await PoolNamespace.pool.query(
             'SELECT * FROM consumers WHERE id = $1',
             [consumerId]
         );
-        if (result.rows.length > 0) {
-            return result.rows[0];
-        }
-        return null;
+
+        const cartResults = await PoolNamespace.pool.query(
+            `
+                SELECT 
+                    c.id AS consumer_id,
+                    s.id AS shop_id,
+                    cp.product_id,
+                    cp.quantity
+                FROM 
+                    consumers c
+                LEFT JOIN 
+                    consumer_to_product cp ON c.id = cp.consumer_id
+                LEFT JOIN 
+                    shops s ON cp.shop_id = s.id
+                WHERE 
+                    c.id = $1
+            `,
+            [consumerId]
+        );
+
+        const generalCart = [];
+        cartResults.rows.forEach(row => {
+            if (generalCart[row.shop_id]) {
+                generalCart[row.shop_id].push({
+                    productId: row.product_id,
+                    quantity: row.quantity
+                });
+            }
+        });
+
+        const result = {
+            ...baseResult.rows[0],
+            general_cart: Object.values(generalCart)
+        };
+    
+        const consumerInstance = new this.Consumer(result.id, result.money, result.general_cart);
+        return consumerInstance;
     }
 }
 

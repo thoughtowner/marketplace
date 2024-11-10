@@ -1,10 +1,12 @@
 import ShopNamespace from './shop.js';
+import PoolNamespace from "./pool.js";
 
 const ProducerNamespace = {
     Producer: class {
-        constructor(title) {
-            this.money = 0;
-            this.shop = new ShopNamespace.Shop(title);
+        constructor(id, money, shopId) {
+            this.id = id;
+            this.money = money || 0;
+            this.shopId = shopId;
         }
 
         // private
@@ -86,6 +88,34 @@ const ProducerNamespace = {
                 throw new Error(`Товар "${product.title}" не найден в магазине "${this.shop.title}".`);
             }
         }
+
+        async updateMoneyInDB() {
+            const result = await PoolNamespace.pool.query(`
+                UPDATE producers
+                SET
+                    money = $1
+                WHERE id = $2
+                RETURNING *
+            `, [this.money, this.id]);
+            return result.rows[0];
+        }
+    },
+
+    async getInstanceById(pool, producerId) {
+        const producerResult = await pool.query(
+            'SELECT * FROM producers WHERE id = $1 LIMIT 1',
+            [producerId]
+        );
+
+        const shopResult = await pool.query(
+            'SELECT * FROM shops WHERE producer_id = $1',
+            [producerId]
+        );
+
+        const producerData = producerResult.rows[0];
+        const shopData = shopResult.rows[0];
+    
+        return new this.Producer(producerData.id, producerData.money, shopData.id);;
     }
 }
 
