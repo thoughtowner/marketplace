@@ -17,40 +17,40 @@ const ConsumerNamespace = {
         putProduct(userName, shop, product, quantity) {
             let isProductExists = false;
             for (let i = 0; i < shop.catalog.length; i++) {
-                if (shop.catalog[i]['product'] === product) {
+                if (shop.catalog[i]['productId'] === product.id) {
                     isProductExists = true;
                     if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
 
                         let isShopIncludes = false;
                         for (let j = 0; j < this.generalCart.length; j++) {
-                            if (this.generalCart[j]['shop'] === shop) {
+                            if (this.generalCart[j]['shopId'] === shop.id) {
                                 isShopIncludes = true;
                                 break;
                             }
                         }
                         if (!isShopIncludes) {
-                            this.generalCart.push({ 'shop': shop, 'cart': [] });
+                            this.generalCart.push({ 'shopId': shop.id, 'cart': [] });
                         }
 
                         let isProductInShopIncludes = false;
                         for (let j = 0; j < this.generalCart.length; j++) {
-                            if (this.generalCart[j]['shop'] === shop) {
+                            if (this.generalCart[j]['shopId'] === shop.id) {
                                 for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
-                                    if (this.generalCart[j]['cart'][k]['product'] === product) {
+                                    if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
                                         isProductInShopIncludes = true;
                                         break;
                                     }
                                 }
                                 if (!isProductInShopIncludes) {
-                                    this.generalCart[j]['cart'].push({ 'product': product, 'quantity': 0 });
+                                    this.generalCart[j]['cart'].push({ 'productId': product.id, 'quantity': 0 });
                                 }
                             }
                         }
 
                         for (let j = 0; j < this.generalCart.length; j++) {
-                            if (this.generalCart[j]['shop'] === shop) {
+                            if (this.generalCart[j]['shopId'] === shop.id) {
                                 for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
-                                    if (this.generalCart[j]['cart'][k]['product'] === product) {
+                                    if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
                                         this.generalCart[j]['cart'][k]['quantity'] += quantity;
                                         shop.catalog[i]['quantityInCarts'] += quantity;
                                         console.log(`Пользователь "${userName}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
@@ -75,13 +75,13 @@ const ConsumerNamespace = {
         putOutProduct(userName, shop, product, quantity) {
             let isProductExists = false;
             for (let i = 0; i < this.generalCart.length; i++) {
-                if (this.generalCart[i]['shop'] === shop) {
+                if (this.generalCart[i]['shopId'] === shop.id) {
                     for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                        if (this.generalCart[i]['cart'][j]['product'] === product) {
+                        if (this.generalCart[i]['cart'][j]['productId'] === product.id) {
                             isProductExists = true;
                             if (quantity <= this.generalCart[i]['cart'][j]['quantity']) {
                                 for (let k = 0; k < shop.catalog.length; k++) {
-                                    if (shop.catalog[k]['product'] === product) {
+                                    if (shop.catalog[k]['productId'] === product.id) {
                                         this.generalCart[i]['cart'][j]['quantity'] -= quantity;
                                         shop.catalog[k]['quantityInCarts'] -= quantity;
 
@@ -117,19 +117,19 @@ const ConsumerNamespace = {
                 let totalCost = 0;
                 for (let i = 0; i < this.generalCart.length; i++) {
                     for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                        unitCost = this.generalCart[i]['cart'][j]['product'].price * this.generalCart[i]['cart'][j]['quantity'];
+                        unitCost = this.generalCart[i]['cart'][j]['productId'].price * this.generalCart[i]['cart'][j]['quantity'];
                         totalCost += unitCost;
-                        this.generalCart[i]['shop'].producer.money += unitCost;
+                        this.generalCart[i]['shopId'].producer.money += unitCost;
                     }
                 }
                 if (this.money >= totalCost) {
 
                     for (let i = 0; i < this.generalCart.length; i++) {
                         for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                            for (let k = 0; k < this.generalCart[i]['shop'].catalog.length; k++) {
-                                if (this.generalCart[i]['cart'][j]['product'] === this.generalCart[i]['shop'].catalog[k]['product']) {
-                                    this.generalCart[i]['shop'].catalog[k]['quantityInCarts'] -= this.generalCart[i]['cart'][j]['quantity'];
-                                    this.generalCart[i]['shop'].catalog[k]['totalQuantity'] -= this.generalCart[i]['cart'][j]['quantity'];
+                            for (let k = 0; k < this.generalCart[i]['shopId'].catalog.length; k++) {
+                                if (this.generalCart[i]['cart'][j]['productId'] === this.generalCart[i]['shopId'].catalog[k]['productId']) {
+                                    this.generalCart[i]['shopId'].catalog[k]['quantityInCarts'] -= this.generalCart[i]['cart'][j]['quantity'];
+                                    this.generalCart[i]['shopId'].catalog[k]['totalQuantity'] -= this.generalCart[i]['cart'][j]['quantity'];
                                 }
                             }
                         }
@@ -158,12 +158,13 @@ const ConsumerNamespace = {
         }
 
         async updateGeneralCartInDB() {
-            let select;
+            let selectResult;
+            let selectData;
             let result;
 
             for (let i = 0; i < this.generalCart.length; i++) {
                 for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                    select = await PoolNamespace.pool.query(
+                    selectResult = await PoolNamespace.pool.query(
                         `
                             SELECT * FROM consumer_to_product
                             WHERE
@@ -174,8 +175,8 @@ const ConsumerNamespace = {
                         [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
                     );
 
-                    if (select.rows.length > 0) {
-                        select = select.rows[0];
+                    if (selectResult.rows.length > 0) {
+                        selectData = selectResult.rows[0];
                         result = await PoolNamespace.pool.query(
                             `
                                 UPDATE consumer_to_product
@@ -186,15 +187,15 @@ const ConsumerNamespace = {
                                     product_id = $3 AND
                                     shop_id = $4
                             `,
-                            [select['quantity'], select['consumer_id'], select['product_id'], select['shop_id']]
+                            [this.generalCart[i]['cart'][j]['quantity'], this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
                         );
                     } else {
                         result = await PoolNamespace.pool.query(
                             `
-                                INSERT INTO consumer_to_product (consumer_id, product_id, shop_id) 
-                                VALUES ($1, $2, $3);
+                                INSERT INTO consumer_to_product (consumer_id, product_id, shop_id, quantity) 
+                                VALUES ($1, $2, $3, $4);
                             `,
-                            [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
+                            [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId'], this.generalCart[i]['cart'][j]['quantity']]
                         );
                     }
                 }
@@ -235,7 +236,7 @@ const ConsumerNamespace = {
             [consumerId]
         );
 
-        const generalCart = [];
+        let generalCart = [];
         cartResults.rows.forEach(row => {
             if (generalCart[row.shop_id]) {
                 generalCart[row.shop_id].push({
@@ -247,10 +248,10 @@ const ConsumerNamespace = {
 
         const result = {
             ...baseResult.rows[0],
-            general_cart: Object.values(generalCart)
+            generalCart: Object.values(generalCart)
         };
     
-        const consumerInstance = new this.Consumer(result.id, result.money, result.general_cart);
+        let consumerInstance = new this.Consumer(result.id, result.money, result.generalCart);
         return consumerInstance;
     }
 }

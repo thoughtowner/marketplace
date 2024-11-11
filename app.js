@@ -6,6 +6,7 @@ import UserNamespace from './modules/user.js';
 import ConsumerNamespace from './modules/consumer.js';
 import ProducerNamespace from './modules/producer.js';
 import ProductNamespace from './modules/product.js';
+import ShopNamespace from './modules/shop.js';
 import PoolNamespace from './modules/pool.js';
 import DelayNamespace from './modules/delay.js';
 
@@ -36,10 +37,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.post('/test/:userID', async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
-    const userInstance = await UserNamespace.getInstanceById(PoolNamespace.pool, userID);
+    const userInstance = await UserNamespace.getInstanceById(userID);
     await userInstance.addMoneyToConsumer(money);
     await DelayNamespace.delay(100);
-    let consumerInstance = await ConsumerNamespace.getInstanceById(PoolNamespace.pool, userInstance.consumerId);
+    let consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
     res.status(200).json({ consumerMoney: consumerInstance.money });
 });
 
@@ -116,16 +117,18 @@ app.get('/', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/js-lessons/24-09-2024/alpha/index.html');
 });
 
-app.post('/users/addMoneyToConsumer/:userID', async (req, res) => {
+app.post('/addMoneyToConsumer/users/:userID', async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
 
     try {
         if (userID && money) {
-            const userInstance = await UserNamespace.getInstanceById(PoolNamespace.pool, userID);
+            const userInstance = await UserNamespace.getInstanceById(userID);
+
             await userInstance.addMoneyToConsumer(money);
             await DelayNamespace.delay(100);
-            let consumerInstance = await ConsumerNamespace.getInstanceById(PoolNamespace.pool, userInstance.consumerId);
+
+            const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
             res.status(200).json({ consumerMoney: consumerInstance.money });
         } else {
             res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
@@ -136,16 +139,18 @@ app.post('/users/addMoneyToConsumer/:userID', async (req, res) => {
     }
 });
 
-app.post('/users/reduceMoneyFromProducer/:userID', async (req, res) => {
+app.post('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
 
     try {
         if (userID && money) {
-            const userInstance = await UserNamespace.getInstanceById(PoolNamespace.pool, userID);
+            const userInstance = await UserNamespace.getInstanceById(userID);
+
             await userInstance.reduceMoneyFromProducer(money);
             await DelayNamespace.delay(100);
-            const producerInstance = await ProducerNamespace.getInstanceById(PoolNamespace.pool, userInstance.producerId);
+
+            const producerInstance = await ProducerNamespace.getInstanceById(userInstance.producerId);
             res.status(200).json({ producerMoney: producerInstance.money });
         } else {
             res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
@@ -154,6 +159,35 @@ app.post('/users/reduceMoneyFromProducer/:userID', async (req, res) => {
         console.error(error);
         res.status(500).json({ 'error': error.message });
     }
+});
+
+app.post('/putProductToGeneralCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
+    const { shopId, productId, userID } = req.params;
+    const { quantity } = req.body;
+
+    let shopInstance = await ShopNamespace.getInstanceById(shopId);
+    const productInstance = await ProductNamespace.getInstanceById(productId);
+    const userInstance = await UserNamespace.getInstanceById(userID);
+
+    await userInstance.putProductToGeneralCart(shopInstance, productInstance, quantity);
+    await DelayNamespace.delay(100);
+
+    const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
+    res.status(200).json({ consumerGeneralCart: consumerInstance.generalCart });
+});
+
+app.post('/addProductToShop/products/:productId/users/:userID', async (req, res) => {
+    const { productId, userID } = req.params;
+    const { quantity } = req.body;
+
+    const productInstance = await ProductNamespace.getInstanceById(productId);
+    const userInstance = await UserNamespace.getInstanceById(userID);
+
+    await userInstance.addProductToShop(productInstance, quantity);
+    await DelayNamespace.delay(100);
+
+    const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+    res.status(200).json({ shopCatalog: shopInstance.catalog });
 });
 
 app.get('/products', async (req, res) => {

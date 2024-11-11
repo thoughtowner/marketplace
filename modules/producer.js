@@ -3,10 +3,10 @@ import PoolNamespace from "./pool.js";
 
 const ProducerNamespace = {
     Producer: class {
-        constructor(id, money, shopId) {
+        constructor(id, money=null, shopId=null) {
             this.id = id;
             this.money = money || 0;
-            this.shopId = shopId;
+            this.shopId = shopId || null;
         }
 
         // private
@@ -26,41 +26,39 @@ const ProducerNamespace = {
         }
 
         // public
-        addProduct(product, quantity) {
-            this.checkQuantityValue(quantity);
+        async addProduct(userName, shop, product, quantity) {
             let isProductIncludes = false;
-            for (let i = 0; i < this.shop.catalog.length; i++) {
-                if (this.shop.catalog[i]['product'] === product) {
+            for (let i = 0; i < shop.catalog.length; i++) {
+                if (shop.catalog[i]['productId'] === product.id) {
                     isProductIncludes = true;
                     break;
                 }
             }
             if (!isProductIncludes) {
-                this.shop.catalog.push({ 'product': product, 'totalQuantity': 0, 'quantityInCarts': 0 });
+                shop.catalog.push({ 'productId': product.id, 'totalQuantity': quantity, 'quantityInCarts': 0 });
             }
 
-            for (let i = 0; i < this.shop.catalog.length; i++) {
-                if (this.shop.catalog[i]['product'] === product) {
-                    this.shop.catalog[i]['totalQuantity'] += quantity;
-                    console.log(`Пользователь "${this.user.name}" добавил в магазин "${this.shop.title}" ${quantity} штук товара "${product.title}".`);
+            for (let i = 0; i < shop.catalog.length; i++) {
+                if (shop.catalog[i]['productId'] === product.id) {
+                    shop.catalog[i]['totalQuantity'] += quantity;
+                    console.log(`Пользователь "${userName}" добавил в магазин "${shop.title}" ${quantity} штук товара "${product.title}".`);
                     break;
                 }
             }
         }
 
         // public
-        reduceProduct(product, quantity) {
-            this.checkQuantityValue(quantity);
+        reduceProduct(userName, product, quantity) {
             let isProductExists = false;
             for (let i = 0; i < this.shop.catalog.length; i++) {
-                if (this.shop.catalog[i]['product'] === product) {
+                if (this.shop.catalog[i]['productId'] === product.id) {
                     isProductExists = true;
                     if (quantity <= this.shop.catalog[i]['totalQuantity'] - this.shop.catalog[i]['quantityInCarts']) {
                         this.shop.catalog[i]['totalQuantity'] -= quantity;
-                        console.log(`Пользователь "${this.user.name}" уменьшил в магазине "${this.shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
+                        console.log(`Пользователь "${userName}" уменьшил в магазине "${this.shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
                         break;
                     } else {
-                        throw new Error(`Пользователь "${this.user.name}" не может уменьшить в магазине "${this.shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
+                        throw new Error(`Пользователь "${userName}" не может уменьшить в магазине "${this.shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
                     }
                 }
             }
@@ -70,17 +68,17 @@ const ProducerNamespace = {
         }
 
         // public
-        deleteProduct(product) {
+        deleteProduct(userName, product) {
             let isProductExists = false;
             for (let i = 0; i < this.shop.catalog.length; i++) {
-                if (this.shop.catalog[i]['product'] === product) {
+                if (this.shop.catalog[i]['productId'] === product.id) {
                     isProductExists = true;
                     if (this.shop.catalog[i]['totalQuantity'] === 0) {
                         this.shop.catalog.splice(i, 1);
-                        console.log(`Пользователь "${this.user.name}" удалил из магазина "${this.shop.title}" товар "${product.title}".`);
+                        console.log(`Пользователь "${userName}" удалил из магазина "${this.shop.title}" товар "${product.title}".`);
                         break;
                     } else {
-                        throw new Error(`Пользователь "${this.user.name}" не может удалить из магазина "${this.shop.title}" товар "${product.title}", так как он ещё не закончился.`);
+                        throw new Error(`Пользователь "${userName}" не может удалить из магазина "${this.shop.title}" товар "${product.title}", так как он ещё не закончился.`);
                     }
                 }
             }
@@ -101,13 +99,13 @@ const ProducerNamespace = {
         }
     },
 
-    async getInstanceById(pool, producerId) {
-        const producerResult = await pool.query(
-            'SELECT * FROM producers WHERE id = $1 LIMIT 1',
+    async getInstanceById(producerId) {
+        const producerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM producers WHERE id = $1',
             [producerId]
         );
 
-        const shopResult = await pool.query(
+        const shopResult = await PoolNamespace.pool.query(
             'SELECT * FROM shops WHERE producer_id = $1',
             [producerId]
         );
@@ -115,7 +113,8 @@ const ProducerNamespace = {
         const producerData = producerResult.rows[0];
         const shopData = shopResult.rows[0];
     
-        return new this.Producer(producerData.id, producerData.money, shopData.id);;
+        let producerInstance = new this.Producer(producerData.id, producerData.money, shopData.id);
+        return producerInstance;
     }
 }
 
