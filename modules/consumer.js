@@ -2,10 +2,10 @@ import PoolNamespace from "./pool.js";
 
 const ConsumerNamespace = {
     Consumer: class {
-        constructor(id, money=null, generalCart=null) {
+        constructor(id, money=null, cart=null) {
             this.id = id;
             this.money = money || 0;
-            this.generalCart = generalCart || [];
+            this.cart = cart || [];
         }
 
         // internal
@@ -21,45 +21,66 @@ const ConsumerNamespace = {
                     isProductExists = true;
                     if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
 
-                        let isShopIncludes = false;
-                        for (let j = 0; j < this.generalCart.length; j++) {
-                            if (this.generalCart[j]['shopId'] === shop.id) {
-                                isShopIncludes = true;
+                        // let isShopIncludes = false;
+                        // for (let j = 0; j < this.generalCart.length; j++) {
+                        //     if (this.generalCart[j]['shopId'] === shop.id) {
+                        //         isShopIncludes = true;
+                        //         break;
+                        //     }
+                        // }
+                        // if (!isShopIncludes) {
+                        //     this.generalCart.push({ 'shopId': shop.id, 'cart': [] });
+                        // }
+
+                        // let isProductInShopIncludes = false;
+                        // for (let j = 0; j < this.generalCart.length; j++) {
+                        //     if (this.generalCart[j]['shopId'] === shop.id) {
+                        //         for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
+                        //             if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
+                        //                 isProductInShopIncludes = true;
+                        //                 break;
+                        //             }
+                        //         }
+                        //         if (!isProductInShopIncludes) {
+                        //             this.generalCart[j]['cart'].push({ 'productId': product.id, 'quantity': 0 });
+                        //         }
+                        //     }
+                        // }
+
+                        let isProductIncludes = false;
+                        for (let j = 0; j < this.cart.length; j++) {
+                            if (this.cart[j]['productId'] === product.id) {
+                                isProductIncludes = true;
                                 break;
                             }
                         }
-                        if (!isShopIncludes) {
-                            this.generalCart.push({ 'shopId': shop.id, 'cart': [] });
+                        if (!isProductIncludes) {
+                            this.cart.push({ 'shopId': shop.id, 'productId': product.id, 'quantity': 0 });
                         }
 
-                        let isProductInShopIncludes = false;
-                        for (let j = 0; j < this.generalCart.length; j++) {
-                            if (this.generalCart[j]['shopId'] === shop.id) {
-                                for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
-                                    if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
-                                        isProductInShopIncludes = true;
-                                        break;
-                                    }
-                                }
-                                if (!isProductInShopIncludes) {
-                                    this.generalCart[j]['cart'].push({ 'productId': product.id, 'quantity': 0 });
-                                }
-                            }
-                        }
+                        // for (let j = 0; j < this.generalCart.length; j++) {
+                        //     if (this.generalCart[j]['shopId'] === shop.id) {
+                        //         for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
+                        //             if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
+                        //                 this.generalCart[j]['cart'][k]['quantity'] += quantity;
+                        //                 shop.catalog[i]['quantityInCarts'] += quantity;
+                        //                 console.log(`Пользователь "${userName}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
+                        //                 break;
+                        //             }
+                        //         }
+                        //         break;
+                        //     }
+                        // }
 
-                        for (let j = 0; j < this.generalCart.length; j++) {
-                            if (this.generalCart[j]['shopId'] === shop.id) {
-                                for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
-                                    if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
-                                        this.generalCart[j]['cart'][k]['quantity'] += quantity;
-                                        shop.catalog[i]['quantityInCarts'] += quantity;
-                                        console.log(`Пользователь "${userName}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
-                                        break;
-                                    }
-                                }
+                        for (let j = 0; j < this.cart.length; j++) {
+                            if (this.cart[j]['productId'] === product.id) {
+                                this.cart[j]['quantity'] += quantity;
+                                shop.catalog[i]['quantityInCarts'] += quantity;
+                                console.log(`Пользователь "${userName}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
                                 break;
                             }
                         }
+
                     } else {
                         throw new Error(`Пользователь "${userName}" не может положить в корзину товар "${product.title}" в количестве ${quantity} штук из магазина "${shop.title}", так как в магазине недостаточно этого товара.`);
                     }
@@ -162,42 +183,40 @@ const ConsumerNamespace = {
             let selectData;
             let result;
 
-            for (let i = 0; i < this.generalCart.length; i++) {
-                for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                    selectResult = await PoolNamespace.pool.query(
-                        `
-                            SELECT * FROM consumer_to_product
-                            WHERE
-                                consumer_id = $1 AND
-                                product_id = $2 AND
-                                shop_id = $3
-                        `,
-                        [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
-                    );
+            for (let i = 0; i < this.cart.length; i++) {
+                selectResult = await PoolNamespace.pool.query(
+                    `
+                        SELECT * FROM consumer_to_product
+                        WHERE
+                            consumer_id = $1 AND
+                            product_id = $2 AND
+                            shop_id = $3
+                    `,
+                    [this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
+                );
 
-                    if (selectResult.rows.length > 0) {
-                        selectData = selectResult.rows[0];
-                        result = await PoolNamespace.pool.query(
-                            `
-                                UPDATE consumer_to_product
-                                SET
-                                    quantity = $1
-                                WHERE
-                                    consumer_id = $2 AND
-                                    product_id = $3 AND
-                                    shop_id = $4
-                            `,
-                            [this.generalCart[i]['cart'][j]['quantity'], this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId']]
-                        );
-                    } else {
-                        result = await PoolNamespace.pool.query(
-                            `
-                                INSERT INTO consumer_to_product (consumer_id, product_id, shop_id, quantity) 
-                                VALUES ($1, $2, $3, $4);
-                            `,
-                            [this.id, this.generalCart[i]['cart'][j]['productId'], this.generalCart[i]['shopId'], this.generalCart[i]['cart'][j]['quantity']]
-                        );
-                    }
+                if (selectResult.rows.length > 0) {
+                    selectData = selectResult.rows[0];
+                    result = await PoolNamespace.pool.query(
+                        `
+                            UPDATE consumer_to_product
+                            SET
+                                quantity = $1
+                            WHERE
+                                consumer_id = $2 AND
+                                product_id = $3 AND
+                                shop_id = $4
+                        `,
+                        [this.cart[i]['quantity'], this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
+                    );
+                } else {
+                    result = await PoolNamespace.pool.query(
+                        `
+                            INSERT INTO consumer_to_product (consumer_id, product_id, shop_id, quantity) 
+                            VALUES ($1, $2, $3, $4);
+                        `,
+                        [this.id, this.cart[i]['productId'], this.cart[i]['shopId'], this.cart[i]['quantity']]
+                    );
                 }
             }
         }
@@ -236,22 +255,21 @@ const ConsumerNamespace = {
             [consumerId]
         );
 
-        let generalCart = [];
+        let cart = [];
         cartResults.rows.forEach(row => {
-            if (generalCart[row.shop_id]) {
-                generalCart[row.shop_id].push({
-                    productId: row.product_id,
-                    quantity: row.quantity
-                });
-            }
+            cart.push({
+                shopId: row.shop_id,
+                productId: row.product_id,
+                quantity: row.quantity
+            });
         });
 
         const result = {
             ...baseResult.rows[0],
-            generalCart: Object.values(generalCart)
+            cart: Object.values(cart)
         };
     
-        let consumerInstance = new this.Consumer(result.id, result.money, result.generalCart);
+        let consumerInstance = new this.Consumer(result.id, result.money, result.cart);
         return consumerInstance;
     }
 }

@@ -77,13 +77,11 @@ const ShopNamespace = {
 
         let catalog = [];
         catalogResults.rows.forEach(row => {
-            if (catalogResults) {
-                catalog.push({
-                    productId: row.product_id,
-                    totalQuantity: row.total_quantity,
-                    quantityInCarts: row.quantity_in_carts
-                });
-            }
+            catalog.push({
+                productId: row.product_id,
+                totalQuantity: row.total_quantity,
+                quantityInCarts: row.quantity_in_carts
+            });
         });
 
         const result = {

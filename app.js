@@ -173,7 +173,7 @@ app.post('/putProductToGeneralCart/shops/:shopId/products/:productId/users/:user
     await DelayNamespace.delay(100);
 
     const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
-    res.status(200).json({ consumerGeneralCart: consumerInstance.generalCart });
+    res.status(200).json({ consumerCart: consumerInstance.cart });
 });
 
 app.post('/addProductToShop/products/:productId/users/:userID', async (req, res) => {

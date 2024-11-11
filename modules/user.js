@@ -91,29 +91,7 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
 
-            for (let i = 0; i < consumer.generalCart.length; i++) {
-                console.log('====================');
-                console.log(consumer.generalCart[i]['shopId']);
-                console.log('--------------------');
-                for (let j = 0; j < consumer.generalCart[i]['cart'].length; j++) {
-                    console.log(consumer.generalCart[i]['cart'][j]);
-                }
-                console.log('====================');
-            }
-
-            console.log('###########################');
-
             consumer.putProduct(this.name, shop, product, quantity);
-            
-            for (let i = 0; i < consumer.generalCart.length; i++) {
-                console.log('====================');
-                console.log(consumer.generalCart[i]['shopId']);
-                console.log('--------------------');
-                for (let j = 0; j < consumer.generalCart[i]['cart'].length; j++) {
-                    console.log(consumer.generalCart[i]['cart'][j]);
-                }
-                console.log('====================');
-            }
 
             consumer.updateGeneralCartInDB();
             shop.updateCatalogInDB();
