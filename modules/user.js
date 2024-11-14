@@ -86,22 +86,23 @@ const UserNamespace = {
         }
 
         // public
-        async putProductToGeneralCart(shop, product, quantity) {
+        async putProductToCart(shop, product, quantity) {
             this.checkRoleAffiliation('consumer');
             checkQuantityValue(quantity);
             let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
-
             consumer.putProduct(this.name, shop, product, quantity);
-
-            consumer.updateGeneralCartInDB();
+            consumer.updateCartInDB();
             shop.updateCatalogInDB();
         }
 
         // public
-        putOutProductToGeneralCart(shop, product, quantity) {
+        async putOutProductFromCart(shop, product, quantity) {
             this.checkRoleAffiliation('consumer');
             checkQuantityValue(quantity);
-            this.consumerId.putOutProduct(this.name, shop, product, quantity);
+            let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
+            consumer.putOutProduct(this.name, shop, product, quantity);
+            consumer.updateCartInDB();
+            shop.updateCatalogInDB();
         }
 
         // internal
@@ -146,7 +147,27 @@ const UserNamespace = {
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
             producer.addProduct(this.name, shop, product, quantity);
-            shop.updateCatalogInDB();
+            shop.updateCatalogInDB_2();
+        }
+
+        async reduceProductFromShop(product, quantity) {
+            this.checkRoleAffiliation('producer');
+            checkQuantityValue(quantity);
+            let producer = await ProducerNamespace.getInstanceById(this.producerId);
+            let shop = await ShopNamespace.getInstanceById(producer.shopId);
+            producer.reduceProduct(this.name, shop, product, quantity);
+            shop.updateCatalogInDB_2();
+        }
+
+        async deleteProductFromShop(product) {
+            this.checkRoleAffiliation('producer');
+            let producer = await ProducerNamespace.getInstanceById(this.producerId);
+            let shop = await ShopNamespace.getInstanceById(producer.shopId);
+            console.log(shop);
+            await producer.deleteProduct(this.name, shop, product);
+            shop.deleteProductFromCatalogInDB(product);
+            console.log(shop);
+            // shop.updateCatalogInDB_2();
         }
     },
 

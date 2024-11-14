@@ -21,32 +21,6 @@ const ConsumerNamespace = {
                     isProductExists = true;
                     if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
 
-                        // let isShopIncludes = false;
-                        // for (let j = 0; j < this.generalCart.length; j++) {
-                        //     if (this.generalCart[j]['shopId'] === shop.id) {
-                        //         isShopIncludes = true;
-                        //         break;
-                        //     }
-                        // }
-                        // if (!isShopIncludes) {
-                        //     this.generalCart.push({ 'shopId': shop.id, 'cart': [] });
-                        // }
-
-                        // let isProductInShopIncludes = false;
-                        // for (let j = 0; j < this.generalCart.length; j++) {
-                        //     if (this.generalCart[j]['shopId'] === shop.id) {
-                        //         for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
-                        //             if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
-                        //                 isProductInShopIncludes = true;
-                        //                 break;
-                        //             }
-                        //         }
-                        //         if (!isProductInShopIncludes) {
-                        //             this.generalCart[j]['cart'].push({ 'productId': product.id, 'quantity': 0 });
-                        //         }
-                        //     }
-                        // }
-
                         let isProductIncludes = false;
                         for (let j = 0; j < this.cart.length; j++) {
                             if (this.cart[j]['productId'] === product.id) {
@@ -57,20 +31,6 @@ const ConsumerNamespace = {
                         if (!isProductIncludes) {
                             this.cart.push({ 'shopId': shop.id, 'productId': product.id, 'quantity': 0 });
                         }
-
-                        // for (let j = 0; j < this.generalCart.length; j++) {
-                        //     if (this.generalCart[j]['shopId'] === shop.id) {
-                        //         for (let k = 0; k < this.generalCart[j]['cart'].length; k++) {
-                        //             if (this.generalCart[j]['cart'][k]['productId'] === product.id) {
-                        //                 this.generalCart[j]['cart'][k]['quantity'] += quantity;
-                        //                 shop.catalog[i]['quantityInCarts'] += quantity;
-                        //                 console.log(`Пользователь "${userName}" положил в корзину ${quantity} штук товара "${product.title}" из магазина "${shop.title}".`);
-                        //                 break;
-                        //             }
-                        //         }
-                        //         break;
-                        //     }
-                        // }
 
                         for (let j = 0; j < this.cart.length; j++) {
                             if (this.cart[j]['productId'] === product.id) {
@@ -94,36 +54,60 @@ const ConsumerNamespace = {
 
         // internal
         putOutProduct(userName, shop, product, quantity) {
+            // let isProductExists = false;
+            // for (let i = 0; i < this.generalCart.length; i++) {
+            //     if (this.generalCart[i]['shopId'] === shop.id) {
+            //         for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
+            //             if (this.generalCart[i]['cart'][j]['productId'] === product.id) {
+            //                 isProductExists = true;
+            //                 if (quantity <= this.generalCart[i]['cart'][j]['quantity']) {
+            //                     for (let k = 0; k < shop.catalog.length; k++) {
+            //                         if (shop.catalog[k]['productId'] === product.id) {
+            //                             this.generalCart[i]['cart'][j]['quantity'] -= quantity;
+            //                             shop.catalog[k]['quantityInCarts'] -= quantity;
+
+            //                             if (this.generalCart[i]['cart'][j]['quantity'] === 0) {
+            //                                 this.generalCart[i]['cart'].splice(j, 1);
+            //                                 if (this.generalCart[i]['cart'].length === 0) {
+            //                                     this.generalCart.splice(i, 1);
+            //                                 }
+            //                             }
+
+            //                             console.log(`Пользователь "${userName}" выложил из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}".`);
+            //                             break;
+            //                         }
+            //                     }
+            //                 } else {
+            //                     throw new Error(`Пользователь "${userName}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}", так как в корзине пользователя меньшее количество товара, чем он хотел бы выложить.`);
+            //                 }
+            //                 break;
+            //             }
+            //         }
+            //         break;
+            //     }
+            // }
+            // if (!isProductExists) {
+            //     throw new Error(`Товар "${product.title}" не найден в корзине пользователя "${userName}".`);
+            // }
+
             let isProductExists = false;
-            for (let i = 0; i < this.generalCart.length; i++) {
-                if (this.generalCart[i]['shopId'] === shop.id) {
-                    for (let j = 0; j < this.generalCart[i]['cart'].length; j++) {
-                        if (this.generalCart[i]['cart'][j]['productId'] === product.id) {
-                            isProductExists = true;
-                            if (quantity <= this.generalCart[i]['cart'][j]['quantity']) {
-                                for (let k = 0; k < shop.catalog.length; k++) {
-                                    if (shop.catalog[k]['productId'] === product.id) {
-                                        this.generalCart[i]['cart'][j]['quantity'] -= quantity;
-                                        shop.catalog[k]['quantityInCarts'] -= quantity;
+            for (let i = 0; i < this.cart.length; i++) {
+                if (this.cart[i]['productId'] === product.id) {
+                    isProductExists = true;
+                    if (quantity <= this.cart[i]['quantity']) {
 
-                                        if (this.generalCart[i]['cart'][j]['quantity'] === 0) {
-                                            this.generalCart[i]['cart'].splice(j, 1);
-                                            if (this.generalCart[i]['cart'].length === 0) {
-                                                this.generalCart.splice(i, 1);
-                                            }
-                                        }
-
-                                        console.log(`Пользователь "${userName}" выложил из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}".`);
-                                        break;
-                                    }
-                                }
-                            } else {
-                                throw new Error(`Пользователь "${userName}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}", так как в корзине пользователя меньшее количество товара, чем он хотел бы выложить.`);
+                        for (let j = 0; j < shop.catalog.length; j++) {
+                            if (shop.catalog[j]['productId'] === product.id) {
+                                this.cart[i]['quantity'] -= quantity;
+                                shop.catalog[j]['quantityInCarts'] -= quantity;
                             }
-                            break;
                         }
+
+                        console.log(`Пользователь "${userName}" выложил из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}".`);
+                        break;
+                    } else {
+                        throw new Error(`Пользователь "${userName}" не может выложить из корзины товар "${product.title}" в количестве ${quantity} штук в магазин "${shop.title}", так как в корзине пользователя меньшее количество товара, чем он хотел бы выложить.`);
                     }
-                    break;
                 }
             }
             if (!isProductExists) {
@@ -178,7 +162,51 @@ const ConsumerNamespace = {
             return result.rows[0];
         }
 
-        async updateGeneralCartInDB() {
+        async updateCartInDB_2() {
+            let deleteResult;
+            let insertResult;
+
+            for (let i = 0; i < this.cart.length; i++) {
+                deleteResult = await PoolNamespace.pool.query(
+                    `
+                        DELETE FROM consumer_to_product
+                        WHERE
+                            consumer_id = $1 AND
+                            product_id = $2 AND
+                            shop_id = $3
+                    `,
+                    [this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
+                );
+            }
+
+            for (let i = 0; i < this.cart.length; i++) {
+                insertResult = await PoolNamespace.pool.query(
+                    `
+                        INSERT INTO consumer_to_product (consumer_id, product_id, shop_id, quantity)
+                        VALUES ($1, $2, $3, $4);
+                    `,
+                    [this.id, this.cart[i]['productId'], this.cart[i]['shopId'], this.cart[i]['quantity']]
+                );
+            }
+
+            for (let i = 0; i < this.cart.length; i++) {
+                if (this.cart[i]['quantity'] === 0) {
+                    deleteResult = await PoolNamespace.pool.query(
+                        `
+                            DELETE FROM consumer_to_product
+                            WHERE
+                                consumer_id = $1 AND
+                                product_id = $2 AND
+                                shop_id = $3
+                        `,
+                        [this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
+                    );
+                    this.cart.splice(i, 1);
+                }
+            }
+        }
+
+        async updateCartInDB() {
             let selectResult;
             let selectData;
             let result;
@@ -218,6 +246,27 @@ const ConsumerNamespace = {
                         [this.id, this.cart[i]['productId'], this.cart[i]['shopId'], this.cart[i]['quantity']]
                     );
                 }
+
+                // if (this.cart[i]['quantity'] === 0) {
+                //     this.cart.splice(i, 1);
+                //     console.log(this.cart);
+
+                //     // тут нужно ещё написать запрос на удаление записи из consumer_to_product, если quantity = 0
+                // }
+
+                // if (this.cart[i]['quantity'] === 0) {
+                //     result = await PoolNamespace.pool.query(
+                //         `
+                //             DELETE FROM consumer_to_product
+                //             WHERE
+                //                 consumer_id = $1 AND
+                //                 product_id = $2 AND
+                //                 shop_id = $3
+                //         `,
+                //         [this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
+                //     );
+                //     this.cart.splice(i, 1);
+                // }
             }
         }
     },
@@ -257,11 +306,13 @@ const ConsumerNamespace = {
 
         let cart = [];
         cartResults.rows.forEach(row => {
-            cart.push({
-                shopId: row.shop_id,
-                productId: row.product_id,
-                quantity: row.quantity
-            });
+            if (row.shop_id && row.product_id && row.quantity) {
+                cart.push({
+                    shopId: row.shop_id,
+                    productId: row.product_id,
+                    quantity: row.quantity
+                });
+            }
         });
 
         const result = {

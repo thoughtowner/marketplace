@@ -34,16 +34,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.post('/test/:userID', async (req, res) => {
-    const { userID } = req.params;
-    const { money } = req.body;
-    const userInstance = await UserNamespace.getInstanceById(userID);
-    await userInstance.addMoneyToConsumer(money);
-    await DelayNamespace.delay(100);
-    let consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
-    res.status(200).json({ consumerMoney: consumerInstance.money });
-});
-
 app.get('/register', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/js-lessons/24-09-2024/alpha/register.html');
 });
@@ -161,7 +151,7 @@ app.post('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
     }
 });
 
-app.post('/putProductToGeneralCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
+app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
     const { shopId, productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -169,7 +159,22 @@ app.post('/putProductToGeneralCart/shops/:shopId/products/:productId/users/:user
     const productInstance = await ProductNamespace.getInstanceById(productId);
     const userInstance = await UserNamespace.getInstanceById(userID);
 
-    await userInstance.putProductToGeneralCart(shopInstance, productInstance, quantity);
+    await userInstance.putProductToCart(shopInstance, productInstance, quantity);
+    await DelayNamespace.delay(100);
+
+    const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
+    res.status(200).json({ consumerCart: consumerInstance.cart });
+});
+
+app.post('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
+    const { shopId, productId, userID } = req.params;
+    const { quantity } = req.body;
+
+    let shopInstance = await ShopNamespace.getInstanceById(shopId);
+    const productInstance = await ProductNamespace.getInstanceById(productId);
+    const userInstance = await UserNamespace.getInstanceById(userID);
+
+    await userInstance.putOutProductFromCart(shopInstance, productInstance, quantity);
     await DelayNamespace.delay(100);
 
     const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
@@ -189,6 +194,55 @@ app.post('/addProductToShop/products/:productId/users/:userID', async (req, res)
     const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
     res.status(200).json({ shopCatalog: shopInstance.catalog });
 });
+
+app.post('/reduceProductFromShop/products/:productId/users/:userID', async (req, res) => {
+    const { productId, userID } = req.params;
+    const { quantity } = req.body;
+
+    const productInstance = await ProductNamespace.getInstanceById(productId);
+    const userInstance = await UserNamespace.getInstanceById(userID);
+
+    await userInstance.reduceProductFromShop(productInstance, quantity);
+    await DelayNamespace.delay(100);
+
+    const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+    res.status(200).json({ shopCatalog: shopInstance.catalog });
+});
+
+app.post('/deleteProductFromShop/products/:productId/users/:userID', async (req, res) => {
+    const { productId, userID } = req.params;
+
+    const productInstance = await ProductNamespace.getInstanceById(productId);
+    const userInstance = await UserNamespace.getInstanceById(userID);
+
+    await userInstance.deleteProductFromShop(productInstance);
+    await DelayNamespace.delay(100);
+
+    const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+    res.status(200).json({ shopCatalog: shopInstance.catalog });
+});
+
+
+
+app.get('/getConsumerInstance/consumers/:consumerId', async (req, res) => {
+    const { consumerId } = req.params;
+
+    let consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
+    await consumerInstance.updateCartInDB_2();
+    consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
+    res.status(200).json({ consumerCart: consumerInstance.cart });
+});
+
+app.get('/getShopInstance/shops/:shopId', async (req, res) => {
+    const { shopId } = req.params;
+
+    let shopInstance = await ShopNamespace.getInstanceById(shopId);
+    await shopInstance.updateCatalogInDB_2();
+    shopInstance = await ShopNamespace.getInstanceById(shopId);
+    res.status(200).json({ shopCatalog: shopInstance.catalog });
+});
+
+
 
 app.get('/products', async (req, res) => {
     const result = await pool.query('SELECT * FROM products;');

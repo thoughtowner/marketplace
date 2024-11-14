@@ -35,7 +35,7 @@ const ProducerNamespace = {
                 }
             }
             if (!isProductIncludes) {
-                shop.catalog.push({ 'productId': product.id, 'totalQuantity': quantity, 'quantityInCarts': 0 });
+                shop.catalog.push({ 'productId': product.id, 'totalQuantity': 0, 'quantityInCarts': 0 });
             }
 
             for (let i = 0; i < shop.catalog.length; i++) {
@@ -48,42 +48,43 @@ const ProducerNamespace = {
         }
 
         // public
-        reduceProduct(userName, product, quantity) {
+        reduceProduct(userName, shop, product, quantity) {
             let isProductExists = false;
-            for (let i = 0; i < this.shop.catalog.length; i++) {
-                if (this.shop.catalog[i]['productId'] === product.id) {
+            for (let i = 0; i < shop.catalog.length; i++) {
+                if (shop.catalog[i]['productId'] === product.id) {
                     isProductExists = true;
-                    if (quantity <= this.shop.catalog[i]['totalQuantity'] - this.shop.catalog[i]['quantityInCarts']) {
-                        this.shop.catalog[i]['totalQuantity'] -= quantity;
-                        console.log(`Пользователь "${userName}" уменьшил в магазине "${this.shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
+                    if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
+                        shop.catalog[i]['totalQuantity'] -= quantity;
+                        console.log(`Пользователь "${userName}" уменьшил в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
                         break;
                     } else {
-                        throw new Error(`Пользователь "${userName}" не может уменьшить в магазине "${this.shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
+                        throw new Error(`Пользователь "${userName}" не может уменьшить в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
                     }
                 }
             }
             if (!isProductExists) {
-                throw new Error(`Товар "${product.title}" не найден в магазине "${this.shop.title}".`);
+                throw new Error(`Товар "${product.title}" не найден в магазине "${shop.title}".`);
             }
         }
 
         // public
-        deleteProduct(userName, product) {
+        async deleteProduct(userName, shop, product) {
             let isProductExists = false;
-            for (let i = 0; i < this.shop.catalog.length; i++) {
-                if (this.shop.catalog[i]['productId'] === product.id) {
+            for (let i = 0; i < shop.catalog.length; i++) {
+                // console.log(shop.catalog[i]);
+                if (shop.catalog[i]['productId'] === product.id) {
                     isProductExists = true;
-                    if (this.shop.catalog[i]['totalQuantity'] === 0) {
-                        this.shop.catalog.splice(i, 1);
-                        console.log(`Пользователь "${userName}" удалил из магазина "${this.shop.title}" товар "${product.title}".`);
+                    if (shop.catalog[i]['totalQuantity'] === 0) {
+                        await shop.deleteProductFromCatalogInDB(i);
+                        console.log(`Пользователь "${userName}" удалил из магазина "${shop.title}" товар "${product.title}".`);
                         break;
                     } else {
-                        throw new Error(`Пользователь "${userName}" не может удалить из магазина "${this.shop.title}" товар "${product.title}", так как он ещё не закончился.`);
+                        throw new Error(`Пользователь "${userName}" не может удалить из магазина "${shop.title}" товар "${product.title}", так как он ещё не закончился.`);
                     }
                 }
             }
             if (!isProductExists) {
-                throw new Error(`Товар "${product.title}" не найден в магазине "${this.shop.title}".`);
+                throw new Error(`Товар "${product.title}" не найден в магазине "${shop.title}".`);
             }
         }
 
