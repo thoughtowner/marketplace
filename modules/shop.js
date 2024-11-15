@@ -9,7 +9,7 @@ const ShopNamespace = {
             this.catalog = catalog || [];
         }
 
-        async updateCatalogInDB_2() {
+        async updateCatalogInDB() {
             let deleteResult;
             let insertResult;
 
@@ -51,47 +51,47 @@ const ShopNamespace = {
             // }
         }
 
-        async updateCatalogInDB() {
-            let selectResult;
-            let selectData;
-            let result;
+        // async updateCatalogInDB() {
+        //     let selectResult;
+        //     let selectData;
+        //     let result;
 
-            for (let i = 0; i < this.catalog.length; i++) {
-                selectResult = await PoolNamespace.pool.query(
-                    `
-                        SELECT * FROM shop_to_product
-                        WHERE
-                            shop_id = $1 AND
-                            product_id = $2
-                    `,
-                    [this.id, this.catalog[i]['productId']]
-                );
+        //     for (let i = 0; i < this.catalog.length; i++) {
+        //         selectResult = await PoolNamespace.pool.query(
+        //             `
+        //                 SELECT * FROM shop_to_product
+        //                 WHERE
+        //                     shop_id = $1 AND
+        //                     product_id = $2
+        //             `,
+        //             [this.id, this.catalog[i]['productId']]
+        //         );
 
-                if (selectResult.rows.length > 0) {
-                    selectData = selectResult.rows[0];
-                    result = await PoolNamespace.pool.query(
-                        `
-                            UPDATE shop_to_product
-                            SET
-                                total_quantity = $1,
-                                quantity_in_carts = $2
-                            WHERE
-                                shop_id = $3 AND
-                                product_id = $4
-                        `,
-                        [this.catalog[i]['totalQuantity'], this.catalog[i]['quantityInCarts'], this.id, this.catalog[i]['productId']]
-                    );
-                } else {
-                    result = await PoolNamespace.pool.query(
-                        `
-                            INSERT INTO shop_to_product (shop_id, product_id, total_quantity, quantity_in_carts) 
-                            VALUES ($1, $2, $3, $4);
-                        `,
-                        [this.id, this.catalog[i]['productId'], this.catalog[i]['totalQuantity'], this.catalog[i]['quantityInCarts']]
-                    );
-                }
-            }
-        }
+        //         if (selectResult.rows.length > 0) {
+        //             selectData = selectResult.rows[0];
+        //             result = await PoolNamespace.pool.query(
+        //                 `
+        //                     UPDATE shop_to_product
+        //                     SET
+        //                         total_quantity = $1,
+        //                         quantity_in_carts = $2
+        //                     WHERE
+        //                         shop_id = $3 AND
+        //                         product_id = $4
+        //                 `,
+        //                 [this.catalog[i]['totalQuantity'], this.catalog[i]['quantityInCarts'], this.id, this.catalog[i]['productId']]
+        //             );
+        //         } else {
+        //             result = await PoolNamespace.pool.query(
+        //                 `
+        //                     INSERT INTO shop_to_product (shop_id, product_id, total_quantity, quantity_in_carts) 
+        //                     VALUES ($1, $2, $3, $4);
+        //                 `,
+        //                 [this.id, this.catalog[i]['productId'], this.catalog[i]['totalQuantity'], this.catalog[i]['quantityInCarts']]
+        //             );
+        //         }
+        //     }
+        // }
 
         async deleteProductFromCatalogInDB(i) {
             let deleteResult;

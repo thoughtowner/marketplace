@@ -155,71 +155,137 @@ app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', as
     const { shopId, productId, userID } = req.params;
     const { quantity } = req.body;
 
-    let shopInstance = await ShopNamespace.getInstanceById(shopId);
-    const productInstance = await ProductNamespace.getInstanceById(productId);
-    const userInstance = await UserNamespace.getInstanceById(userID);
+    try {
+        if (shopId && productId&& userID && quantity) {
+            let shopInstance = await ShopNamespace.getInstanceById(shopId);
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            const userInstance = await UserNamespace.getInstanceById(userID);
 
-    await userInstance.putProductToCart(shopInstance, productInstance, quantity);
-    await DelayNamespace.delay(100);
+            await userInstance.putProductToCart(shopInstance, productInstance, quantity);
+            await DelayNamespace.delay(100);
 
-    const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
-    res.status(200).json({ consumerCart: consumerInstance.cart });
+            const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
+            res.status(200).json({ consumerCart: consumerInstance.cart });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 app.post('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
     const { shopId, productId, userID } = req.params;
     const { quantity } = req.body;
 
-    let shopInstance = await ShopNamespace.getInstanceById(shopId);
-    const productInstance = await ProductNamespace.getInstanceById(productId);
-    const userInstance = await UserNamespace.getInstanceById(userID);
+    try {
+        if (shopId && productId&& userID && quantity) {
+            let shopInstance = await ShopNamespace.getInstanceById(shopId);
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            const userInstance = await UserNamespace.getInstanceById(userID);
 
-    await userInstance.putOutProductFromCart(shopInstance, productInstance, quantity);
-    await DelayNamespace.delay(100);
+            await userInstance.putOutProductFromCart(shopInstance, productInstance, quantity);
+            await DelayNamespace.delay(100);
 
-    const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
-    res.status(200).json({ consumerCart: consumerInstance.cart });
+            const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
+            res.status(200).json({ consumerCart: consumerInstance.cart });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 app.post('/addProductToShop/products/:productId/users/:userID', async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
 
-    const productInstance = await ProductNamespace.getInstanceById(productId);
-    const userInstance = await UserNamespace.getInstanceById(userID);
+    try {
+        if (productId && userID && quantity) {
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            const userInstance = await UserNamespace.getInstanceById(userID);
 
-    await userInstance.addProductToShop(productInstance, quantity);
-    await DelayNamespace.delay(100);
+            await userInstance.addProductToShop(productInstance, quantity);
+            await DelayNamespace.delay(100);
 
-    const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
-    res.status(200).json({ shopCatalog: shopInstance.catalog });
+            const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+            res.status(200).json({ shopCatalog: shopInstance.catalog });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 app.post('/reduceProductFromShop/products/:productId/users/:userID', async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
 
-    const productInstance = await ProductNamespace.getInstanceById(productId);
-    const userInstance = await UserNamespace.getInstanceById(userID);
+    try {
+        if (productId && userID && quantity) {
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            const userInstance = await UserNamespace.getInstanceById(userID);
 
-    await userInstance.reduceProductFromShop(productInstance, quantity);
-    await DelayNamespace.delay(100);
+            await userInstance.reduceProductFromShop(productInstance, quantity);
+            await DelayNamespace.delay(100);
 
-    const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
-    res.status(200).json({ shopCatalog: shopInstance.catalog });
+            const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+            res.status(200).json({ shopCatalog: shopInstance.catalog });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 app.post('/deleteProductFromShop/products/:productId/users/:userID', async (req, res) => {
     const { productId, userID } = req.params;
 
-    const productInstance = await ProductNamespace.getInstanceById(productId);
-    const userInstance = await UserNamespace.getInstanceById(userID);
+    try {
+        if (productId && userID) {
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            const userInstance = await UserNamespace.getInstanceById(userID);
 
-    await userInstance.deleteProductFromShop(productInstance);
-    await DelayNamespace.delay(100);
+            await userInstance.deleteProductFromShop(productInstance);
+            await DelayNamespace.delay(100);
 
-    const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
-    res.status(200).json({ shopCatalog: shopInstance.catalog });
+            const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+            res.status(200).json({ shopCatalog: shopInstance.catalog });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+app.post('/buyProducts/users/:userID', async (req, res) => {
+    const { userID } = req.params;
+
+    try {
+        if (userID) {
+            let userInstance = await UserNamespace.getInstanceById(userID);
+
+            await userInstance.buyProducts();
+            await DelayNamespace.delay(100);
+
+            userInstance = await UserNamespace.getInstanceById(userInstance.id);
+            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 
@@ -227,19 +293,22 @@ app.post('/deleteProductFromShop/products/:productId/users/:userID', async (req,
 app.get('/getConsumerInstance/consumers/:consumerId', async (req, res) => {
     const { consumerId } = req.params;
 
-    let consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
-    await consumerInstance.updateCartInDB_2();
-    consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
+    const consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
     res.status(200).json({ consumerCart: consumerInstance.cart });
 });
 
 app.get('/getShopInstance/shops/:shopId', async (req, res) => {
     const { shopId } = req.params;
 
-    let shopInstance = await ShopNamespace.getInstanceById(shopId);
-    await shopInstance.updateCatalogInDB_2();
-    shopInstance = await ShopNamespace.getInstanceById(shopId);
+    const shopInstance = await ShopNamespace.getInstanceById(shopId);
     res.status(200).json({ shopCatalog: shopInstance.catalog });
+});
+
+app.get('/getUserInstance/users/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    const userInstance = await UserNamespace.getInstanceById(userId);
+    res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
 });
 
 

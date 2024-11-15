@@ -26,7 +26,7 @@ const ProducerNamespace = {
         }
 
         // public
-        async addProduct(userName, shop, product, quantity) {
+        addProduct(userName, shop, product, quantity) {
             let isProductIncludes = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 if (shop.catalog[i]['productId'] === product.id) {
@@ -114,6 +114,25 @@ const ProducerNamespace = {
         const producerData = producerResult.rows[0];
         const shopData = shopResult.rows[0];
     
+        let producerInstance = new this.Producer(producerData.id, producerData.money, shopData.id);
+        return producerInstance;
+    },
+
+    async getInstanceByShopId(shopId) {
+        const shopResult = await PoolNamespace.pool.query(
+            'SELECT * FROM shops WHERE id = $1',
+            [shopId]
+        );
+
+        const shopData = shopResult.rows[0];
+
+        const producerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM producers WHERE id = $1',
+            [shopData.producer_id]
+        );
+
+        const producerData = producerResult.rows[0];
+
         let producerInstance = new this.Producer(producerData.id, producerData.money, shopData.id);
         return producerInstance;
     }

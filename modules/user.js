@@ -29,11 +29,11 @@ function checkQuantityValue(quantity) {
 
 const UserNamespace = {
     User: class {
-        constructor(id, name, password, role=null, roleId=null) {
+        constructor(id, name, password, role=null, roleId=null, ownedProducts=null) {
             this.id = id;
             this.name = name;
             this.password = password;
-            this.ownedProducts = [];
+            this.ownedProducts = ownedProducts || [];
             if (role === 'consumer') {
                 this.consumerId = roleId;
                 this.producerId = null;
@@ -67,7 +67,7 @@ const UserNamespace = {
             checkMoneyValue(money);
             let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
             consumer.addMoney(money);
-            consumer.updateMoneyInDB();
+            await consumer.updateMoneyInDB();
             console.log(`Пользователь "${this.name}" положил на счёт для покупок ${money} рублей.`);
         }
 
@@ -78,7 +78,7 @@ const UserNamespace = {
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             if (producer.money >= money) {
                 producer.reduceMoney(money);
-                producer.updateMoneyInDB();
+                await producer.updateMoneyInDB();
                 console.log(`Пользователь "${this.name}" снял со счёта для продаж ${money} рублей.`);
             } else {
                 throw new Error(`Пользователь "${this.name}" не может снять со счёта для продаж ${money} рублей, так как на счёте для продаж недостаточно средств для этого.`);
@@ -91,7 +91,7 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
             consumer.putProduct(this.name, shop, product, quantity);
-            consumer.updateCartInDB();
+            await consumer.updateCartInDB();
             shop.updateCatalogInDB();
         }
 
@@ -101,44 +101,15 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
             consumer.putOutProduct(this.name, shop, product, quantity);
-            consumer.updateCartInDB();
+            await consumer.updateCartInDB();
             shop.updateCatalogInDB();
         }
 
-        // internal
-        transferProductsFromCartToOwned() {
-            let product, quantity;
-            for (let i = 0; i < this.consumerId.generalCart.length; i++) {
-                for (let j = 0; j < this.consumerId.generalCart[i]['cart'].length; j++) {
-                    product = this.consumerId.generalCart[i]['cart'][j]['product'];
-                    quantity = this.consumerId.generalCart[i]['cart'][j]['quantity'];
-
-                    let isProductIncludes = false;
-                    for (let k = 0; k < this.ownedProducts.length; k++) {
-                        if (this.ownedProducts[k]['product'] === product) {
-                            isProductIncludes = true;
-                            break;
-                        }
-                    }
-                    if (!isProductIncludes) {
-                        this.ownedProducts.push({ 'product': product, 'quantity': 0 });
-                    }
-
-                    for (let k = 0; k < this.ownedProducts.length; k++) {
-                        if (this.ownedProducts[k]['product'] === product) {
-                            this.ownedProducts[k]['quantity'] += quantity;
-                            break;
-                        }
-                    }
-                }
-            }
-            this.consumerId.generalCart.splice(0, this.generalCart.length);
-        }
-
         // public
-        buyProducts() {
+        async buyProducts() {
             this.checkRoleAffiliation('consumer');
-            this.consumerId.buyProducts(this.name);
+            let consumer = await ConsumerNamespace.getInstanceById(this.consumerId);
+            await consumer.buyProducts(this.name);
         }
 
         async addProductToShop(product, quantity) {
@@ -146,8 +117,8 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            producer.addProduct(this.name, shop, product, quantity);
-            shop.updateCatalogInDB_2();
+            producer.addProduct(this, shop, product, quantity);
+            shop.updateCatalogInDB();
         }
 
         async reduceProductFromShop(product, quantity) {
@@ -156,18 +127,58 @@ const UserNamespace = {
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
             producer.reduceProduct(this.name, shop, product, quantity);
-            shop.updateCatalogInDB_2();
+            shop.updateCatalogInDB();
         }
 
         async deleteProductFromShop(product) {
             this.checkRoleAffiliation('producer');
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            console.log(shop);
             await producer.deleteProduct(this.name, shop, product);
             shop.deleteProductFromCatalogInDB(product);
-            console.log(shop);
-            // shop.updateCatalogInDB_2();
+            // shop.updateCatalogInDB();
+        }
+
+        async updateOwnedProductsInDB() {
+            let deleteResult;
+            let insertResult;
+
+            for (let i = 0; i < this.ownedProducts.length; i++) {
+                deleteResult = await PoolNamespace.pool.query(
+                    `
+                        DELETE FROM user_to_product
+                        WHERE
+                            user_id = $1 AND
+                            product_id = $2
+                    `,
+                    [this.id, this.ownedProducts[i]['productId']]
+                );
+            }
+
+            for (let i = 0; i < this.ownedProducts.length; i++) {
+                insertResult = await PoolNamespace.pool.query(
+                    `
+                        INSERT INTO user_to_product (user_id, product_id, quantity)
+                        VALUES ($1, $2, $3);
+                    `,
+                    [this.id, this.ownedProducts[i]['productId'], this.ownedProducts[i]['quantity']]
+                );
+            }
+
+            for (let i = 0; i < this.ownedProducts.length; i++) {
+                if (this.ownedProducts[i]['quantity'] === 0) {
+                    deleteResult = await PoolNamespace.pool.query(
+                        `
+                            DELETE FROM user_to_product
+                            WHERE
+                                user_id = $1 AND
+                                product_id = $2
+                        `,
+                        [this.id, this.ownedProducts[i]['productId']]
+                    );
+                    this.ownedProducts.splice(i, 1);
+                }
+            }
         }
     },
 
@@ -182,58 +193,127 @@ const UserNamespace = {
     // }
 
     async getInstanceById(userId) {
-        try {
-            const userResult = await PoolNamespace.pool.query(
-                'SELECT * FROM users WHERE id = $1',
-                [userId]
-            );
-    
-            const userData = userResult.rows[0];
+        const userResult = await PoolNamespace.pool.query(
+            'SELECT * FROM users WHERE id = $1',
+            [userId]
+        );
 
-            let role;
-            let roleId;
+        const userData = userResult.rows[0];
 
-            const consumerResult = await PoolNamespace.pool.query(
-                'SELECT * FROM consumers WHERE user_id = $1',
-                [userId]
-            );
+        let role;
+        let roleId;
 
-            const producerResult = await PoolNamespace.pool.query(
-                'SELECT * FROM producers WHERE user_id = $1',
-                [userId]
-            );
+        const consumerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM consumers WHERE user_id = $1',
+            [userId]
+        );
 
-            if (consumerResult.rows.length > 0) {
-                role = 'consumer';
-                roleId = consumerResult.rows[0].id;
-            } else if (producerResult.rows.length > 0) {
-                role = 'producer';
-                roleId = producerResult.rows[0].id;
-            }
-    
-            // if (await this.isUserProducer(pool, userId)) {
-            //     role = 'producer';
-            //     roleId = await this.getRoleIdByUserId(pool, userId);
-            // } else if (await this.isUserConsumer(pool, userId)) {
-            //     role = 'consumer';
-            //     roleId = await this.getRoleIdByUserId(pool, userId);
-            // } else {
-            //     throw new Error('User is neither producer nor consumer');
-            // }
+        const producerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM producers WHERE user_id = $1',
+            [userId]
+        );
 
-            let userInstance = new this.User(
-                userData.id,
-                userData.name,
-                userData.password,
-                role,
-                roleId
-            );
-    
-            return userInstance;
-        } catch (error) {
-            console.error('Error in getInstanceById:', error);
-            throw error;
+        if (consumerResult.rows.length > 0) {
+            role = 'consumer';
+            roleId = consumerResult.rows[0].id;
+        } else if (producerResult.rows.length > 0) {
+            role = 'producer';
+            roleId = producerResult.rows[0].id;
         }
+
+        const ownedProductsResults = await PoolNamespace.pool.query(
+            `
+                SELECT 
+                    u.id AS user_id,
+                    up.product_id,
+                    up.quantity
+                FROM 
+                    users u
+                LEFT JOIN 
+                    user_to_product up ON u.id = up.user_id
+                WHERE 
+                    u.id = $1
+            `,
+            [userId]
+        );
+
+        let ownedProducts = [];
+        ownedProductsResults.rows.forEach(row => {
+            if (row.product_id !== null && row.quantity !== null) {
+                ownedProducts.push({
+                    productId: row.product_id,
+                    quantity: row.quantity
+                });
+            }
+        });
+
+        // let userInstance = new this.User(
+        //     userData.id,
+        //     userData.name,
+        //     userData.password,
+        //     role,
+        //     roleId
+        // );
+
+        const result = {
+            ...userResult.rows[0],
+            role: role,
+            roleId: roleId,
+            ownedProducts: Object.values(ownedProducts)
+        };
+
+        const userInstance = new this.User(result.id, result.name, result.password, result.role, result.roleId, result.ownedProducts);
+        return userInstance;
+    },
+
+    async getInstanceByConsumerId(consumerId) {
+        const consumerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM consumers WHERE id = $1',
+            [consumerId]
+        );
+
+        const consumerData = consumerResult.rows[0];
+
+        const userResult = await PoolNamespace.pool.query(
+            'SELECT * FROM users WHERE id = $1',
+            [consumerData.user_id]
+        );
+
+        const ownedProductsResults = await PoolNamespace.pool.query(
+            `
+                SELECT 
+                    u.id AS user_id,
+                    up.product_id,
+                    up.quantity
+                FROM 
+                    users u
+                LEFT JOIN 
+                    user_to_product up ON u.id = up.user_id
+                WHERE 
+                    u.id = $1
+            `,
+            [userResult.rows[0].id]
+        );
+
+        let ownedProducts = [];
+        ownedProductsResults.rows.forEach(row => {
+            if (row.product_id !== null && row.quantity !== null) {
+                ownedProducts.push({
+                    productId: row.product_id,
+                    quantity: row.quantity
+                });
+            }
+        });
+
+        const result = {
+            ...userResult.rows[0],
+            role: 'consumer',
+            roleId: consumerId,
+            ownedProducts: Object.values(ownedProducts)
+        };
+
+        const userInstance = new this.User(result.id, result.name, result.password, result.role, result.roleId, result.ownedProducts);
+        return userInstance;
     },
     
     // async isUserProducer(userId) {
