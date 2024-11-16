@@ -74,21 +74,38 @@ const ProducerNamespace = {
 
         // public
         async reduceProductFromShop(userName, shop, product, quantity) {
-            let isProductExists = false;
-            for (let i = 0; i < shop.catalog.length; i++) {
-                if (shop.catalog[i]['productId'] === product.id) {
-                    isProductExists = true;
-                    if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
-                        shop.catalog[i]['totalQuantity'] -= quantity;
-                        console.log(`Пользователь "${userName}" уменьшил в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
-                        break;
-                    } else {
-                        throw new Error(`Пользователь "${userName}" не может уменьшить в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
-                    }
+            let user = await UserNamespace.getInstanceByProducerId(this.id);
+            let isProductIncludesInOwned = false;
+            for (let i = 0; i < user.ownedProducts.length; i++) {
+                if (user.ownedProducts[i]['productId'] === product.id) {
+                    isProductIncludesInOwned = true;
+                    break;
                 }
             }
-            if (!isProductExists) {
-                throw new Error(`Товар "${product.title}" не найден в магазине "${shop.title}".`);
+            if (!isProductIncludesInOwned) {
+                user.ownedProducts.push({ 'productId': product.id, 'quantity': 0 });
+            }
+
+            for (let i = 0; i < user.ownedProducts.length; i++) {
+                if (user.ownedProducts[i]['productId'] === product.id) {
+                    let isProductExists = false;
+                    for (let i = 0; i < shop.catalog.length; i++) {
+                        if (shop.catalog[i]['productId'] === product.id) {
+                            isProductExists = true;
+                            if (quantity <= shop.catalog[i]['totalQuantity'] - shop.catalog[i]['quantityInCarts']) {
+                                shop.catalog[i]['totalQuantity'] -= quantity;
+                                user.ownedProducts[i]['quantity'] += quantity;
+                                console.log(`Пользователь "${userName}" уменьшил в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук.`);
+                                break;
+                            } else {
+                                throw new Error(`Пользователь "${userName}" не может уменьшить в магазине "${shop.title}" количество товара "${product.title}" на ${quantity} штук, так как количетсво товара в магазине меньше, чем уменьшаемого количества.`);
+                            }
+                        }
+                    }
+                    if (!isProductExists) {
+                        throw new Error(`Товар "${product.title}" не найден в магазине "${shop.title}".`);
+                    }
+                }
             }
         }
 
@@ -131,6 +148,10 @@ const ProducerNamespace = {
             [producerId]
         );
 
+        if (producerResult.rows.length === 0) {
+            throw new Error(`В таблице users нет записей с id "${userId}"`);
+        }
+
         const shopResult = await PoolNamespace.pool.query(
             'SELECT * FROM shops WHERE producer_id = $1',
             [producerId]
@@ -148,6 +169,10 @@ const ProducerNamespace = {
             'SELECT * FROM shops WHERE id = $1',
             [shopId]
         );
+
+        if (shopId.rows.length === 0) {
+            throw new Error(`В таблице users нет записей с id "${userId}"`);
+        }
 
         const shopData = shopResult.rows[0];
 

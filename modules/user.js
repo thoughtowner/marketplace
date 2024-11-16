@@ -221,7 +221,9 @@ const UserNamespace = {
             [userId]
         );
 
-        const userData = userResult.rows[0];
+        if (userResult.rows.length === 0) {
+            throw new Error(`В таблице users нет записей с id "${userId}"`);
+        }
 
         let role;
         let roleId;
@@ -344,6 +346,10 @@ const UserNamespace = {
             'SELECT * FROM producers WHERE id = $1',
             [producerId]
         );
+
+        if (consumerResult.rows.length === 0) {
+            throw new Error(`В таблице users нет записей с id "${userId}"`);
+        }
 
         const consumerData = consumerResult.rows[0];
 

@@ -207,70 +207,6 @@ const ConsumerNamespace = {
                 }
             }
         }
-
-        // async updateCartInDB() {
-        //     let selectResult;
-        //     let selectData;
-        //     let result;
-
-        //     for (let i = 0; i < this.cart.length; i++) {
-        //         selectResult = await PoolNamespace.pool.query(
-        //             `
-        //                 SELECT * FROM consumer_to_product
-        //                 WHERE
-        //                     consumer_id = $1 AND
-        //                     product_id = $2 AND
-        //                     shop_id = $3
-        //             `,
-        //             [this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
-        //         );
-
-        //         if (selectResult.rows.length > 0) {
-        //             selectData = selectResult.rows[0];
-        //             result = await PoolNamespace.pool.query(
-        //                 `
-        //                     UPDATE consumer_to_product
-        //                     SET
-        //                         quantity = $1
-        //                     WHERE
-        //                         consumer_id = $2 AND
-        //                         product_id = $3 AND
-        //                         shop_id = $4
-        //                 `,
-        //                 [this.cart[i]['quantity'], this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
-        //             );
-        //         } else {
-        //             result = await PoolNamespace.pool.query(
-        //                 `
-        //                     INSERT INTO consumer_to_product (consumer_id, product_id, shop_id, quantity) 
-        //                     VALUES ($1, $2, $3, $4);
-        //                 `,
-        //                 [this.id, this.cart[i]['productId'], this.cart[i]['shopId'], this.cart[i]['quantity']]
-        //             );
-        //         }
-
-        //         // if (this.cart[i]['quantity'] === 0) {
-        //         //     this.cart.splice(i, 1);
-        //         //     console.log(this.cart);
-
-        //         //     // тут нужно ещё написать запрос на удаление записи из consumer_to_product, если quantity = 0
-        //         // }
-
-        //         // if (this.cart[i]['quantity'] === 0) {
-        //         //     result = await PoolNamespace.pool.query(
-        //         //         `
-        //         //             DELETE FROM consumer_to_product
-        //         //             WHERE
-        //         //                 consumer_id = $1 AND
-        //         //                 product_id = $2 AND
-        //         //                 shop_id = $3
-        //         //         `,
-        //         //         [this.id, this.cart[i]['productId'], this.cart[i]['shopId']]
-        //         //     );
-        //         //     this.cart.splice(i, 1);
-        //         // }
-        //     }
-        // }
     },
 
     async getInstanceById(consumerId) {
@@ -278,6 +214,10 @@ const ConsumerNamespace = {
             'SELECT * FROM consumers WHERE id = $1',
             [consumerId]
         );
+
+        if (baseResult.rows.length === 0) {
+            throw new Error(`В таблице users нет записей с id "${userId}"`);
+        }
 
         const cartResults = await PoolNamespace.pool.query(
             `

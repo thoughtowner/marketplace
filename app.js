@@ -288,6 +288,38 @@ app.post('/buyProducts/users/:userID', async (req, res) => {
     }
 });
 
+app.post('/addNewProductToOwned/users/:userID', async (req, res) => {
+    const { userID } = req.params;
+    const { title, price, quantity } = req.body;
+
+    try {
+        if (userID && quantity) {
+            let userInstance = await UserNamespace.getInstanceById(userID);
+
+            const insertResult = await PoolNamespace.pool.query(
+                `
+                    INSERT INTO products (title, price)
+                    VALUES ($1, $2)
+                    RETURNING *;
+                `,
+                [title, price]
+            );
+            await DelayNamespace.delay(100);
+
+            await userInstance.addOwnedProductToOwned(insertResult.rows[0], quantity);
+            await DelayNamespace.delay(100);
+
+            userInstance = await UserNamespace.getInstanceById(userID);
+            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
 app.post('/addOwnedProductToOwned/products/:productId/users/:userID', async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
@@ -311,57 +343,42 @@ app.post('/addOwnedProductToOwned/products/:productId/users/:userID', async (req
     }
 });
 
-app.post('/addNewProductToOwned/users/:userID', async (req, res) => {
-    const { userID } = req.params;
-    const { title, price, quantity } = req.body;
 
+
+app.get('/getConsumerInstance/consumers/:consumerId', async (req, res) => {
     try {
-        if (userID && quantity) {
-            let userInstance = await UserNamespace.getInstanceById(userID);
+        const { consumerId } = req.params;
 
-            const insertResult = await PoolNamespace.pool.query(
-                `
-                    INSERT INTO products (title, price)
-                    VALUES ($1, $2);
-                `,
-                [title, price]
-            );
-
-            await userInstance.addOwnedProductToOwned(insertResult.rows[0], quantity);
-            await DelayNamespace.delay(100);
-
-            userInstance = await UserNamespace.getInstanceById(userID);
-            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
-        }
+        const consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
+        res.status(200).json({ consumerCart: consumerInstance.cart });
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
     }
 });
 
-
-
-app.get('/getConsumerInstance/consumers/:consumerId', async (req, res) => {
-    const { consumerId } = req.params;
-
-    const consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
-    res.status(200).json({ consumerCart: consumerInstance.cart });
-});
-
 app.get('/getShopInstance/shops/:shopId', async (req, res) => {
-    const { shopId } = req.params;
+    try {
+        const { shopId } = req.params;
 
-    const shopInstance = await ShopNamespace.getInstanceById(shopId);
-    res.status(200).json({ shopCatalog: shopInstance.catalog });
+        const shopInstance = await ShopNamespace.getInstanceById(shopId);
+        res.status(200).json({ shopCatalog: shopInstance.catalog });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 app.get('/getUserInstance/users/:userId', async (req, res) => {
-    const { userId } = req.params;
+    try {
+        const { userId } = req.params;
 
-    const userInstance = await UserNamespace.getInstanceById(userId);
-    res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+        const userInstance = await UserNamespace.getInstanceById(userId);
+        res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
 });
 
 

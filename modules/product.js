@@ -16,6 +16,10 @@ const ProductNamespace = {
             [productId]
         );
 
+        if (result.rows.length === 0) {
+            throw new Error(`В таблице users нет записей с id "${userId}"`);
+        }
+
         const productData = result.rows[0];
     
         let productInstance = new this.Product(productData.id, productData.title, productData.price);
