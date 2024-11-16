@@ -216,7 +216,7 @@ const ConsumerNamespace = {
         );
 
         if (baseResult.rows.length === 0) {
-            throw new Error(`В таблице users нет записей с id "${userId}"`);
+            throw new Error(`В таблице consumers нет записей с id "${userId}"`);
         }
 
         const cartResults = await PoolNamespace.pool.query(

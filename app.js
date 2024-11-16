@@ -13,23 +13,10 @@ import DelayNamespace from './modules/delay.js';
 import bcrypt from 'bcrypt';
 import bodyParser from 'body-parser';
 
-
-// const { Pool } = pg;
-// const pool = new Pool(
-//     {
-//         'user': 'postgres',
-//         'host': 'localhost',
-//         'database': '',
-//         'password': 'postgres',
-//         'port': 7960,
-//     }
-// );
-
 const app = express();
 const port = 8000;
 
 app.use(cors());
-// app.use(express.json());
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -107,7 +94,7 @@ app.get('/', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/js-lessons/24-09-2024/alpha/index.html');
 });
 
-app.post('/addMoneyToConsumer/users/:userID', async (req, res) => {
+app.put('/addMoneyToConsumer/users/:userID', async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
 
@@ -129,7 +116,7 @@ app.post('/addMoneyToConsumer/users/:userID', async (req, res) => {
     }
 });
 
-app.post('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
+app.put('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
 
@@ -175,7 +162,7 @@ app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', as
     }
 });
 
-app.post('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
+app.put('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
     const { shopId, productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -222,7 +209,7 @@ app.post('/addProductToShop/products/:productId/users/:userID', async (req, res)
     }
 });
 
-app.post('/reduceProductFromShop/products/:productId/users/:userID', async (req, res) => {
+app.put('/reduceProductFromShop/products/:productId/users/:userID', async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -245,7 +232,7 @@ app.post('/reduceProductFromShop/products/:productId/users/:userID', async (req,
     }
 });
 
-app.post('/deleteProductFromShop/products/:productId/users/:userID', async (req, res) => {
+app.delete('/deleteProductFromShop/products/:productId/users/:userID', async (req, res) => {
     const { productId, userID } = req.params;
 
     try {
@@ -345,232 +332,87 @@ app.post('/addOwnedProductToOwned/products/:productId/users/:userID', async (req
 
 
 
-app.get('/getConsumerInstance/consumers/:consumerId', async (req, res) => {
-    try {
-        const { consumerId } = req.params;
-
-        const consumerInstance = await ConsumerNamespace.getInstanceById(consumerId);
-        res.status(200).json({ consumerCart: consumerInstance.cart });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
-
-app.get('/getShopInstance/shops/:shopId', async (req, res) => {
-    try {
-        const { shopId } = req.params;
-
-        const shopInstance = await ShopNamespace.getInstanceById(shopId);
-        res.status(200).json({ shopCatalog: shopInstance.catalog });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
-
-app.get('/getUserInstance/users/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-
-        const userInstance = await UserNamespace.getInstanceById(userId);
-        res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
-
-
-
-app.get('/products', async (req, res) => {
-    const result = await pool.query('SELECT * FROM products;');
+app.get('/users', async (req, res) => {
+    const result = await PoolNamespace.pool.query('SELECT * FROM users;');
     res.status(200).json(result.rows);
 });
 
 app.get('/consumers', async (req, res) => {
-    let result = [];
-    let productToConsumerDataFromDB, productDataFromDB;
-    const consumersDataFromDB = await pool.query('SELECT * FROM consumers;');
-    for (let i = 0; i < consumersDataFromDB.rows.length; i++) {
-        result.push({ 'consumer': consumersDataFromDB.rows[i], 'cart': [] });
-        productToConsumerDataFromDB = await pool.query(
-            'SELECT * FROM product_to_consumer WHERE consumer_id = $1;',
-            [consumersDataFromDB.rows[i].id]
-        );
-        for (let j = 0; j < productToConsumerDataFromDB.rows.length; j++) {
-            productDataFromDB = await pool.query(
-                'SELECT * FROM products WHERE id = $1;',
-                [productToConsumerDataFromDB.rows[j].product_id]
-            );
-            result[i].products.push({ 'product': productDataFromDB.rows[0], 'quantity': productToConsumerDataFromDB.rows[j].quantity });
-        }
-    }
-    res.status(200).json(result);
+    const result = await PoolNamespace.pool.query('SELECT * FROM consumers;');
+    res.status(200).json(result.rows);
 });
 
-app.post('/products', async (req, res) => {
-    const { title, price } = req.body;
+app.get('/producers', async (req, res) => {
+    const result = await PoolNamespace.pool.query('SELECT * FROM producers;');
+    res.status(200).json(result.rows);
+});
 
+app.get('/shops', async (req, res) => {
+    const result = await PoolNamespace.pool.query('SELECT * FROM shops;');
+    res.status(200).json(result.rows);
+});
+
+app.get('/products', async (req, res) => {
+    const result = await PoolNamespace.pool.query('SELECT * FROM products;');
+    res.status(200).json(result.rows);
+});
+
+
+
+app.get('/users/:userId', async (req, res) => {
     try {
-        if (title && price) {
-            const productInstance = new ProductNamespace.Product(title, price);
-            const result = await pool.query(
-                'INSERT INTO products (title, price) VALUES ($1, $2) RETURNING *;',
-                [productInstance.title, productInstance.price]
-            );
-            res.status(201).json({'product': result.rows[0]});
-        } else {
-            res.status(400).json({ 'error': 'Неверно указаны название товара и(или) цена.' });
-        }
+        const { userId } = req.params;
+
+        const user = await UserNamespace.getInstanceById(userId);
+        res.status(200).json({ user: user });
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
     }
 });
 
-// app.post('/consumers/:userID', async (req, res) => {
-//     const { userID } = req.params;
-//     const { money } = req.body;
-    
-//     try {
-//         if (money) {
-//             const result = await pool.query(
-//                 'INSERT INTO consumers (user_id, money) VALUES ($1, $2) RETURNING *;',
-//                 [userID, money]
-//             );
-//             res.status(201).json({'consumer': result.rows[0]});
-//         } else {
-//             res.status(400).json({ 'error': 'The request body was passed incorrectly: money' });
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ 'error': error.message });
-//     }
-// });
-
-app.put('/consumers/addMoney/:consumerID', async (req, res) => {
-    const { consumerID } = req.params;
-    const { money } = req.body;
-
+app.get('/consumers/:consumerId', async (req, res) => {
     try {
-        if (consumerID, money) {
-            const consumerDataFromDB = await pool.query(
-                'SELECT * FROM consumers WHERE id = $1;',
-                [consumerID]
-            );
-            if (consumerDataFromDB.rowCount > 0) {
-                const consumerData = consumerDataFromDB.rows[0];
-                const consumerInstance = new ConsumerNamespace.Consumer(consumerData.money);
-                consumerInstance.addMoney(money);
-                const result = await pool.query(
-                    'UPDATE consumers SET money = $1 WHERE id = $2 RETURNING *;',
-                    [consumerInstance.money, consumerData.id]
-                );
-                res.json({ 'consumer': result.rows[0] });
-            } else {
-                res.status(404).json({ 'error': `Покупатель с ID "${consumerID}" не найден.` });
-            }
-        } else {
-            res.status(400).json({ 'error': 'Неверно указано количество денег.' });
-        }
+        const { consumerId } = req.params;
+
+        const consumer = await ConsumerNamespace.getInstanceById(consumerId);
+        res.status(200).json({ consumer: consumer });
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
     }
 });
 
-app.put('/consumers/putProduct/:consumerID', async (req, res) => {
-    const { consumerID } = req.params;
-    const { productID, quantity } = req.body;
-
+app.get('/producers/:producerId', async (req, res) => {
     try {
-        const consumerDataFromDB = await pool.query(
-            'SELECT * FROM consumers WHERE id = $1;',
-            [consumerID]
-        );
-        if (consumerDataFromDB.rowCount > 0) {
-            const productDataFromDB = await pool.query(
-                'SELECT * FROM products WHERE id = $1;',
-                [productID]
-            );
-            if (productDataFromDB.rowCount > 0) {
-                let consumerData = consumerDataFromDB.rows[0];
-                const productData = productDataFromDB.rows[0];
-                let productToConsumerDataFromDB = await pool.query(
-                    'SELECT * FROM product_to_consumer WHERE consumer_id = $1 AND product_id = $2;',
-                    [consumerData.id, productData.id]
-                );
+        const { producerId } = req.params;
 
-                const productInstance = new ProductNamespace.Product(productData.title, productData.price);
+        const producer = await ProducerNamespace.getInstanceById(producerId);
+        res.status(200).json({ producer: producer });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
 
-                let consumerProductsFromDB = [];
-                let consumerProductDataFromDB;
-                for (let i = 0; i < productToConsumerDataFromDB.rows.length; i++) {
-                    consumerProductDataFromDB = await pool.query(
-                        'SELECT * FROM products WHERE id = $1;',
-                        [productToConsumerDataFromDB.rows[i].product_id]
-                    );
-                    consumerProductsFromDB.push(consumerProductDataFromDB.rows[0]);
-                }
+app.get('/shops/:shopId', async (req, res) => {
+    try {
+        const { shopId } = req.params;
 
-                let consumerProducts = [];
-                let consumerProductInstance;
-                for (let i = 0; i < consumerProductsFromDB.length; i++) {
-                    consumerProductInstance = new ProductNamespace.Product(consumerProductsFromDB[i].title, consumerProductsFromDB[i].price);
-                    consumerProducts.push({ 'product': consumerProductInstance, 'quantity': productToConsumerDataFromDB.rows[i].quantity });
-                }
+        const shop = await ShopNamespace.getInstanceById(shopId);
+        res.status(200).json({ shop: shop });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
 
-                let consumerInstance = new ConsumerNamespace.Consumer(consumerData.money, consumerProducts);
+app.get('/products/:productId', async (req, res) => {
+    try {
+        const { productId } = req.params;
 
-                consumerInstance.putProduct(productInstance, quantity);
-                consumerData.quantity = consumerInstance.cart.find(function (element) { return element.product.title === productInstance.title; }).quantity;
-
-                let putProduct;
-                if (productToConsumerDataFromDB.rowCount > 0) {
-                    putProduct = await pool.query(
-                        'UPDATE product_to_consumer SET quantity = $1 WHERE consumer_id = $2 AND product_id = $3 RETURNING *;',
-                        [consumerData.quantity, consumerData.id, productData.id]
-                    );
-                } else {
-                    putProduct = await pool.query(
-                        'INSERT INTO product_to_consumer (consumer_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING *;',
-                        [consumerData.id, productData.id, consumerData.quantity]
-                    );
-                }
-
-                // res.json({ 'productToConsumer': putProduct.rows[0] });
-                res.json({ 'productToConsumer': consumerInstance });
-
-                // Получить consumer из бд
-
-                // productToConsumerDataFromDB = await pool.query(
-                //     'SELECT * FROM product_to_consumer WHERE consumer_id = $1 AND product_id = $2;',
-                //     [consumerData.id, productData.id]
-                // );
-                // consumerProductsFromDB.splice(0, consumerProductsFromDB.length);
-                // consumerProducts.splice(0, consumerProducts.length);
-                // for (let i = 0; i < productToConsumerDataFromDB.rows.length; i++) {
-                //     consumerProductDataFromDB = await pool.query(
-                //         'SELECT * FROM products WHERE id = $1;',
-                //         [productToConsumerDataFromDB.rows[i].product_id]
-                //     );
-                //     consumerProductsFromDB.push(consumerProductDataFromDB.rows[0]);
-                // }
-                // for (let i = 0; i < consumerProductsFromDB.length; i++) {
-                //     consumerProductInstance = new ProductNamespace.Product(consumerProductsFromDB[i].title, consumerProductsFromDB[i].price);
-                //     consumerProducts.push({ 'product': consumerProductInstance, 'quantity': productToConsumerDataFromDB.rows[i].quantity });
-                // }
-                // consumerInstance = new ConsumerNamespace.Consumer(consumerData.money, consumerProducts);
-
-
-                // res.json({ 'consumer': consumerInstance });
-            } else {
-                res.status(404).json({ 'error': `Товар с ID ${productID} не найден.` });
-            }
-        } else {
-            res.status(404).json({ 'error': `Покупатель с ID ${consumerID} не найден.` });
-        }
+        const product = await ProductNamespace.getInstanceById(productId);
+        res.status(200).json({ product: product });
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });

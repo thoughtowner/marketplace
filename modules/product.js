@@ -17,7 +17,7 @@ const ProductNamespace = {
         );
 
         if (result.rows.length === 0) {
-            throw new Error(`В таблице users нет записей с id "${userId}"`);
+            throw new Error(`В таблице products нет записей с id "${userId}"`);
         }
 
         const productData = result.rows[0];

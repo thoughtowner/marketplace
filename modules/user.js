@@ -136,7 +136,6 @@ const UserNamespace = {
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
             await producer.deleteProductFromShop(this.name, shop, product);
             shop.deleteProductFromCatalogInDB(product);
-            // shop.updateCatalogInDB();
         }
 
         async addOwnedProductToOwned(product, quantity) {
@@ -205,16 +204,6 @@ const UserNamespace = {
         }
     },
 
-    // async getInstanceById(pool, userId) {
-    //     const result = await pool.query(
-    //         'SELECT * FROM users WHERE id = $1',
-    //         [userId]
-    //     );
-    //     const userData = result.rows[0];
-    //     const userInstance = new this.User(userData.id, userData.name, userData.password, userData.role, userData.roleId);
-    //     return userInstance;
-    // }
-
     async getInstanceById(userId) {
         const userResult = await PoolNamespace.pool.query(
             'SELECT * FROM users WHERE id = $1',
@@ -272,14 +261,6 @@ const UserNamespace = {
             }
         });
 
-        // let userInstance = new this.User(
-        //     userData.id,
-        //     userData.name,
-        //     userData.password,
-        //     role,
-        //     roleId
-        // );
-
         const result = {
             ...userResult.rows[0],
             role: role,
@@ -300,7 +281,7 @@ const UserNamespace = {
         const consumerData = consumerResult.rows[0];
 
         const userResult = await PoolNamespace.pool.query(
-            'SELECT * FROM users WHERE id = $1',
+            'SELECT * FROM consumers WHERE id = $1',
             [consumerData.user_id]
         );
 
@@ -348,7 +329,7 @@ const UserNamespace = {
         );
 
         if (consumerResult.rows.length === 0) {
-            throw new Error(`В таблице users нет записей с id "${userId}"`);
+            throw new Error(`В таблице producers нет записей с id "${userId}"`);
         }
 
         const consumerData = consumerResult.rows[0];
@@ -394,31 +375,6 @@ const UserNamespace = {
         const userInstance = new this.User(result.id, result.name, result.password, result.role, result.roleId, result.ownedProducts);
         return userInstance;
     },
-    
-    // async isUserProducer(userId) {
-    //     const result = await PoolNamespace.pool.query(
-    //         'SELECT 1 FROM producers WHERE user_id = $1 LIMIT 1',
-    //         [userId]
-    //     );
-    //     return result.rowCount > 0;
-    // },
-    
-    // async isUserConsumer(userId) {
-    //     const result = await PoolNamespace.pool.query(
-    //         'SELECT 1 FROM consumers WHERE user_id = $1 LIMIT 1',
-    //         [userId]
-    //     );
-    //     return result.rowCount > 0;
-    // },
-    
-    // async getRoleIdByUserId(userId) {
-    //     const result = await PoolNamespace.pool.query(
-    //         'SELECT CASE WHEN EXISTS (SELECT 1 FROM producers WHERE user_id = $1) THEN 1 ELSE 2 END AS role_id FROM users WHERE id = $1',
-    //         [userId]
-    //     );
-    //     console.log(result.rows[0].role_id);
-    //     return result.rows[0].role_id;
-    // }
 }
 
 export default UserNamespace;
