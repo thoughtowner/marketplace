@@ -52,9 +52,6 @@ app.post('/register', async (req, res) => {
             consumer: consumerData
         });
     } catch (error) {
-        if (error.code === '23505') {
-            return res.status(409).json({ error: 'Пользователь с таким именем уже существует.' });
-        }
         res.status(500).json({ error: error.message });
     }
 });
@@ -108,7 +105,7 @@ app.put('/addMoneyToConsumer/users/:userID', async (req, res) => {
             const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
             res.status(200).json({ consumerMoney: consumerInstance.money });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя, количество денег.' });
         }
     } catch (error) {
         console.error(error);
@@ -130,7 +127,7 @@ app.put('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
             const producerInstance = await ProducerNamespace.getInstanceById(userInstance.producerId);
             res.status(200).json({ producerMoney: producerInstance.money });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя, количество денег.' });
         }
     } catch (error) {
         console.error(error);
@@ -143,7 +140,7 @@ app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', as
     const { quantity } = req.body;
 
     try {
-        if (shopId && productId&& userID && quantity) {
+        if (shopId && productId && userID && quantity) {
             let shopInstance = await ShopNamespace.getInstanceById(shopId);
             const productInstance = await ProductNamespace.getInstanceById(productId);
             const userInstance = await UserNamespace.getInstanceById(userID);
@@ -154,7 +151,7 @@ app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', as
             const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
             res.status(200).json({ consumerCart: consumerInstance.cart });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID магазина, ID продукта, ID пользователя, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -178,7 +175,7 @@ app.put('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID'
             const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
             res.status(200).json({ consumerCart: consumerInstance.cart });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID магазина, ID продукта, ID пользователя, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -201,7 +198,7 @@ app.post('/addProductToShop/products/:productId/users/:userID', async (req, res)
             const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
             res.status(200).json({ shopCatalog: shopInstance.catalog });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID продукта, ID пользователя, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -224,7 +221,7 @@ app.put('/reduceProductFromShop/products/:productId/users/:userID', async (req, 
             const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
             res.status(200).json({ shopCatalog: shopInstance.catalog });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID продукта, ID пользователя, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -246,7 +243,7 @@ app.delete('/deleteProductFromShop/products/:productId/users/:userID', async (re
             const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
             res.status(200).json({ shopCatalog: shopInstance.catalog });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID продукта, ID пользователя.' });
         }
     } catch (error) {
         console.error(error);
@@ -267,7 +264,7 @@ app.post('/buyProducts/users/:userID', async (req, res) => {
             userInstance = await UserNamespace.getInstanceById(userID);
             res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указан ID пользователя.' });
         }
     } catch (error) {
         console.error(error);
@@ -299,7 +296,7 @@ app.post('/addNewProductToOwned/users/:userID', async (req, res) => {
             userInstance = await UserNamespace.getInstanceById(userID);
             res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя, название продукта, цена продукта, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -322,7 +319,7 @@ app.post('/addOwnedProductToOwned/products/:productId/users/:userID', async (req
             userInstance = await UserNamespace.getInstanceById(userID);
             res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
         } else {
-            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+            res.status(400).json({ 'error': 'Неверно указаны ID продукта, ID пользователя, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -360,11 +357,15 @@ app.get('/products', async (req, res) => {
 
 
 app.get('/users/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
+    const { userId } = req.params;
 
-        const user = await UserNamespace.getInstanceById(userId);
-        res.status(200).json({ user: user });
+    try {
+        if (userId) {
+            const user = await UserNamespace.getInstanceById(userId);
+            res.status(200).json({ user: user });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указан ID пользователя.' });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
@@ -372,11 +373,15 @@ app.get('/users/:userId', async (req, res) => {
 });
 
 app.get('/consumers/:consumerId', async (req, res) => {
-    try {
-        const { consumerId } = req.params;
+    const { consumerId } = req.params;
 
-        const consumer = await ConsumerNamespace.getInstanceById(consumerId);
-        res.status(200).json({ consumer: consumer });
+    try {
+        if (consumerId) {
+            const consumer = await ConsumerNamespace.getInstanceById(consumerId);
+            res.status(200).json({ consumer: consumer });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указан ID акаунта покупателя.' });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
@@ -384,11 +389,15 @@ app.get('/consumers/:consumerId', async (req, res) => {
 });
 
 app.get('/producers/:producerId', async (req, res) => {
-    try {
-        const { producerId } = req.params;
+    const { producerId } = req.params;
 
-        const producer = await ProducerNamespace.getInstanceById(producerId);
-        res.status(200).json({ producer: producer });
+    try {
+        if (producerId) {
+            const producer = await ProducerNamespace.getInstanceById(producerId);
+            res.status(200).json({ producer: producer });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указан ID акаунта продавца.' });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
@@ -396,11 +405,15 @@ app.get('/producers/:producerId', async (req, res) => {
 });
 
 app.get('/shops/:shopId', async (req, res) => {
-    try {
-        const { shopId } = req.params;
+    const { shopId } = req.params;
 
-        const shop = await ShopNamespace.getInstanceById(shopId);
-        res.status(200).json({ shop: shop });
+    try {
+        if (shopId) {
+            const shop = await ShopNamespace.getInstanceById(shopId);
+            res.status(200).json({ shop: shop });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указан ID магазина.' });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
@@ -408,11 +421,15 @@ app.get('/shops/:shopId', async (req, res) => {
 });
 
 app.get('/products/:productId', async (req, res) => {
-    try {
-        const { productId } = req.params;
+    const { productId } = req.params;
 
-        const product = await ProductNamespace.getInstanceById(productId);
-        res.status(200).json({ product: product });
+    try {
+        if (productId) {
+            const product = await ProductNamespace.getInstanceById(productId);
+            res.status(200).json({ product: product });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указан ID продукта.' });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });

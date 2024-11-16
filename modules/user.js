@@ -1,7 +1,6 @@
 import ConsumerNamespace from "./consumer.js";
 import ProducerNamespace from "./producer.js";
 import PoolNamespace from "./pool.js";
-import ProductNamespace from "./product.js";
 import ShopNamespace from "./shop.js";
 
 
@@ -34,6 +33,7 @@ const UserNamespace = {
             this.name = name;
             this.password = password;
             this.ownedProducts = ownedProducts || [];
+            this.role = role;
             if (role === 'consumer') {
                 this.consumerId = roleId;
                 this.producerId = null;
@@ -214,8 +214,8 @@ const UserNamespace = {
             throw new Error(`В таблице users нет записей с id "${userId}"`);
         }
 
-        let role;
-        let roleId;
+        let role = null;
+        let roleId = null;
 
         const consumerResult = await PoolNamespace.pool.query(
             'SELECT * FROM consumers WHERE user_id = $1',
@@ -278,12 +278,20 @@ const UserNamespace = {
             [consumerId]
         );
 
+        if (consumerResult.rows.length === 0) {
+            throw new Error(`В таблице consumers нет записей с id "${consumerId}"`);
+        }
+
         const consumerData = consumerResult.rows[0];
 
         const userResult = await PoolNamespace.pool.query(
             'SELECT * FROM consumers WHERE id = $1',
             [consumerData.user_id]
         );
+
+        if (userResult.rows.length === 0) {
+            throw new Error(`Никакой пользователь не связан с аккаунтом покупателя с id ${consumerId}`);
+        }
 
         const ownedProductsResults = await PoolNamespace.pool.query(
             `
@@ -338,6 +346,10 @@ const UserNamespace = {
             'SELECT * FROM users WHERE id = $1',
             [consumerData.user_id]
         );
+
+        if (userResult.rows.length === 0) {
+            throw new Error(`Никакой пользователь не связан с аккаунтом продавца с id ${consumerId}`);
+        }
 
         const ownedProductsResults = await PoolNamespace.pool.query(
             `

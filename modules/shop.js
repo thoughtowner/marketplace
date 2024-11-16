@@ -73,7 +73,7 @@ const ShopNamespace = {
         );
 
         if (baseResult.rows.length === 0) {
-            throw new Error(`В таблице shops нет записей с id "${userId}"`);
+            throw new Error(`В таблице shops нет записей с id "${shopId}"`);
         }
 
         const catalogResults = await PoolNamespace.pool.query(
