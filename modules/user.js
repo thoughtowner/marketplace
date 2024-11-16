@@ -117,7 +117,7 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            producer.addProduct(this, shop, product, quantity);
+            await producer.addProductToShop(this.name, shop, product, quantity);
             shop.updateCatalogInDB();
         }
 
@@ -126,7 +126,7 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            producer.reduceProduct(this.name, shop, product, quantity);
+            await producer.reduceProductFromShop(this.name, shop, product, quantity);
             shop.updateCatalogInDB();
         }
 
@@ -134,9 +134,32 @@ const UserNamespace = {
             this.checkRoleAffiliation('producer');
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            await producer.deleteProduct(this.name, shop, product);
+            await producer.deleteProductFromShop(this.name, shop, product);
             shop.deleteProductFromCatalogInDB(product);
             // shop.updateCatalogInDB();
+        }
+
+        async addOwnedProductToOwned(product, quantity) {
+            this.checkRoleAffiliation('producer');
+
+            let isProductIncludes = false;
+            for (let i = 0; i < this.ownedProducts.length; i++) {
+                if (this.ownedProducts[i]['productId'] === product.id) {
+                    isProductIncludes = true;
+                    break;
+                }
+            }
+            if (!isProductIncludes) {
+                this.ownedProducts.push({ 'productId': product.id, 'quantity': 0 });
+            }
+            
+            for (let i = 0; i < this.ownedProducts.length; i++) {
+                if (this.ownedProducts[i]['productId'] === product.id) {
+                    this.ownedProducts[i]['quantity'] += quantity;
+                    break;
+                }
+            }
+            await this.updateOwnedProductsInDB();
         }
 
         async updateOwnedProductsInDB() {
@@ -309,6 +332,56 @@ const UserNamespace = {
             ...userResult.rows[0],
             role: 'consumer',
             roleId: consumerId,
+            ownedProducts: Object.values(ownedProducts)
+        };
+
+        const userInstance = new this.User(result.id, result.name, result.password, result.role, result.roleId, result.ownedProducts);
+        return userInstance;
+    },
+
+    async getInstanceByProducerId(producerId) {
+        const consumerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM producers WHERE id = $1',
+            [producerId]
+        );
+
+        const consumerData = consumerResult.rows[0];
+
+        const userResult = await PoolNamespace.pool.query(
+            'SELECT * FROM users WHERE id = $1',
+            [consumerData.user_id]
+        );
+
+        const ownedProductsResults = await PoolNamespace.pool.query(
+            `
+                SELECT 
+                    u.id AS user_id,
+                    up.product_id,
+                    up.quantity
+                FROM 
+                    users u
+                LEFT JOIN 
+                    user_to_product up ON u.id = up.user_id
+                WHERE 
+                    u.id = $1
+            `,
+            [userResult.rows[0].id]
+        );
+
+        let ownedProducts = [];
+        ownedProductsResults.rows.forEach(row => {
+            if (row.product_id !== null && row.quantity !== null) {
+                ownedProducts.push({
+                    productId: row.product_id,
+                    quantity: row.quantity
+                });
+            }
+        });
+
+        const result = {
+            ...userResult.rows[0],
+            role: 'consumer',
+            roleId: producerId,
             ownedProducts: Object.values(ownedProducts)
         };
 

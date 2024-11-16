@@ -1,5 +1,6 @@
 import ShopNamespace from './shop.js';
 import PoolNamespace from "./pool.js";
+import UserNamespace from './user.js';
 
 const ProducerNamespace = {
     Producer: class {
@@ -26,29 +27,53 @@ const ProducerNamespace = {
         }
 
         // public
-        addProduct(userName, shop, product, quantity) {
-            let isProductIncludes = false;
-            for (let i = 0; i < shop.catalog.length; i++) {
-                if (shop.catalog[i]['productId'] === product.id) {
-                    isProductIncludes = true;
+        async addProductToShop(userName, shop, product, quantity) {
+            let user = await UserNamespace.getInstanceByProducerId(this.id);
+            let isProductIncludesInOwned = false;
+            for (let i = 0; i < user.ownedProducts.length; i++) {
+                if (user.ownedProducts[i]['productId'] === product.id) {
+                    isProductIncludesInOwned = true;
                     break;
                 }
             }
-            if (!isProductIncludes) {
-                shop.catalog.push({ 'productId': product.id, 'totalQuantity': 0, 'quantityInCarts': 0 });
+            if (!isProductIncludesInOwned) {
+                throw new Error(`Товар "${product.title}" не найден в имеющихся товарах пользователя "${user.name}".`);
             }
 
-            for (let i = 0; i < shop.catalog.length; i++) {
-                if (shop.catalog[i]['productId'] === product.id) {
-                    shop.catalog[i]['totalQuantity'] += quantity;
-                    console.log(`Пользователь "${userName}" добавил в магазин "${shop.title}" ${quantity} штук товара "${product.title}".`);
+            for (let i = 0; i < user.ownedProducts.length; i++) {
+                if (user.ownedProducts[i]['productId'] === product.id) {
+                    if (user.ownedProducts[i]['quantity'] >= quantity) {
+                        let isProductIncludesInShop = false;
+                        for (let j = 0; j < shop.catalog.length; j++) {
+                            if (shop.catalog[j]['productId'] === product.id) {
+                                isProductIncludesInShop = true;
+                                break;
+                            }
+                        }
+                        if (!isProductIncludesInShop) {
+                            shop.catalog.push({ 'productId': product.id, 'totalQuantity': 0, 'quantityInCarts': 0 });
+                        }
+        
+                        for (let j = 0; j < shop.catalog.length; j++) {
+                            if (shop.catalog[j]['productId'] === product.id) {
+                                shop.catalog[j]['totalQuantity'] += quantity;
+                                console.log(`Пользователь "${userName}" добавил в магазин "${shop.title}" ${quantity} штук товара "${product.title}".`);
+                                break;
+                            }
+                        }
+        
+                        user.ownedProducts[i]['quantity'] -= quantity;
+                        user.updateOwnedProductsInDB();
+                    } else {
+                        throw new Error(`Пользователь "${userName}" не модет добавить в магазин "${shop.title}" ${quantity} штук товара "${product.title}", так как количество этого продукта среди имеющихся у него продуктов недостаточно для этого.`);
+                    }
                     break;
                 }
             }
         }
 
         // public
-        reduceProduct(userName, shop, product, quantity) {
+        async reduceProductFromShop(userName, shop, product, quantity) {
             let isProductExists = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 if (shop.catalog[i]['productId'] === product.id) {
@@ -68,7 +93,7 @@ const ProducerNamespace = {
         }
 
         // public
-        async deleteProduct(userName, shop, product) {
+        async deleteProductFromShop(userName, shop, product) {
             let isProductExists = false;
             for (let i = 0; i < shop.catalog.length; i++) {
                 // console.log(shop.catalog[i]);

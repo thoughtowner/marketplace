@@ -277,7 +277,60 @@ app.post('/buyProducts/users/:userID', async (req, res) => {
             await userInstance.buyProducts();
             await DelayNamespace.delay(100);
 
-            userInstance = await UserNamespace.getInstanceById(userInstance.id);
+            userInstance = await UserNamespace.getInstanceById(userID);
+            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+app.post('/addOwnedProductToOwned/products/:productId/users/:userID', async (req, res) => {
+    const { productId, userID } = req.params;
+    const { quantity } = req.body;
+
+    try {
+        if (productId && userID && quantity) {
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            let userInstance = await UserNamespace.getInstanceById(userID);
+
+            await userInstance.addOwnedProductToOwned(productInstance, quantity);
+            await DelayNamespace.delay(100);
+
+            userInstance = await UserNamespace.getInstanceById(userID);
+            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+app.post('/addNewProductToOwned/users/:userID', async (req, res) => {
+    const { userID } = req.params;
+    const { title, price, quantity } = req.body;
+
+    try {
+        if (userID && quantity) {
+            let userInstance = await UserNamespace.getInstanceById(userID);
+
+            const insertResult = await PoolNamespace.pool.query(
+                `
+                    INSERT INTO products (title, price)
+                    VALUES ($1, $2);
+                `,
+                [title, price]
+            );
+
+            await userInstance.addOwnedProductToOwned(insertResult.rows[0], quantity);
+            await DelayNamespace.delay(100);
+
+            userInstance = await UserNamespace.getInstanceById(userID);
             res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
         } else {
             res.status(400).json({ 'error': 'Неверно указаны ID пользователя и(или) количество денег.' });
