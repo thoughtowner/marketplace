@@ -8,13 +8,17 @@
 <body>
     <h1>Регистрация</h1>
     <form action="/register" method="POST">
-        <label for="username">Имя пользователя:</label>
-        <input type="text" name="username" id="username" required>
+        <label for="name">Имя пользователя:</label>
+        <input type="text" name="name" id="name" required>
         <br>
         <label for="password">Пароль:</label>
         <input type="password" name="password" id="password" required>
         <br>
+        <label for="role">Роль:</label>
+        <input type="text" name="role" id="role" required>
+        <br>
         <button type="submit">Зарегистрироваться</button>
     </form>
+    <a href="/login" class="btn btn-link">Войти в систему</a>
 </body>
 </html>
