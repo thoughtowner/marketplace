@@ -170,7 +170,81 @@ app.get('/account', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/account.html');
 });
 
-app.get('/ownedProducts', async (req, res) => {
+app.get('/error', (req, res) => {
+    let { error } = req.query;
+    const errorObject = { message: error };
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
+        headers: { 'Content-Type': 'text/html' },
+        body: JSON.stringify(errorObject)
+    });
+});
+
+// app.get('/callError', async (req, res) => {
+//     try {
+//         throw new Error('Что-то пошло не так')
+//     } catch (error) {
+//         const user = req.session.user;
+//         const userInstance = await UserNamespace.getInstanceById(user.id);
+//         const errorData = { message: userInstance};
+//         // res.redirect(`/error?message=${encodeURIComponent(JSON.stringify(errorData))}`);
+//         res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
+//             headers: { 'Content-Type': 'text/html' },
+//             body: JSON.stringify(errorData)
+//         });
+//     }
+// });
+
+
+// app.get('/error', (req, res) => {
+//     let { error } = req.query;
+//     const errorObject = { message: error };
+//     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
+//         headers: { 'Content-Type': 'text/html' },
+//         body: JSON.stringify(errorObject)
+//     });
+// });
+
+// app.get('/callError', async (req, res) => {
+//     try {
+//         throw new Error('Что-то пошло не так')
+//     } catch (error) {
+//         const errorData = { message: error.message };
+//         res.redirect(`/error?message=${encodeURIComponent(JSON.stringify(errorData))}`);
+//     }
+// });
+
+// app.get('/callError', async (req, res) => {
+//     try {
+//         throw new Error('Что-то пошло не так')
+//     } catch (error) {
+//         const errorData = { message: error.message };
+        
+//         // Создаем заголовок с данными ошибки
+//         const errorHeader = {
+//             'Content-Type': 'text/html'
+//         };
+
+//         // Отправляем файл с добавленным заголовком
+//         res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
+//             headers: { 'Content-Type': 'text/html' },
+//             body: JSON.stringify(errorData)
+//         });
+//     }
+// });
+
+// app.get('/callError', async (req, res) => {
+//     try {
+//         throw new Error('Что-то пошло не так')
+//     } catch (error) {
+//         const errorData = { message: error.message };
+//         res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
+//             headers: { 'Content-Type': 'text/html' },
+//             body: JSON.stringify(errorData)
+//         });
+//     }
+// });
+
+app.get('/account/ownedProducts', async (req, res) => {
     try {
         const user = req.session.user;
         if (!user) {
@@ -178,65 +252,60 @@ app.get('/ownedProducts', async (req, res) => {
         }
 
         const userInstance = await UserNamespace.getInstanceById(user.id);
-        
-        console.log('Получен пользователь:', user);
-        console.log('Данные пользователя:', userInstance);
+        let userDataOfProducts = [];
+        let productInstance;
+        for (let i = 0; i < userInstance.ownedProducts.length; i++) {
+            productInstance = await ProductNamespace.getInstanceById(userInstance.ownedProducts[i]['productId']);
+            userDataOfProducts.push(
+                {
+                    'product': {
+                        'id': productInstance.id,
+                        'title': productInstance.title,
+                        'price': productInstance.price,
+                        'photo': productInstance.photo
+                    },
+                    'quantity': userInstance.ownedProducts[i]['quantity']
+                }
+            );
+        }
 
-        // Создаем HTML-страницу с данными
         const html = `
             <!DOCTYPE html>
             <html lang="ru">
             <head>
                 <meta charset="UTF-8">
-                <title>Владельские продуктов: ${Object.keys(userInstance.ownedProducts).length}</title>
+                <title>Имеющиеся товары</title>
             </head>
             <body>
-                <h1>Владельские продуктов: ${Object.keys(userInstance.ownedProducts).length}</h1>
+                <h1>Имеющиеся товары</h1>
 
                 <div id="logDiv"></div>
 
-                <table id="productsTable">
-                    <thead>
-                        <tr>
-                            <th>ID продукта</th>
-                            <th>Название продукта</th>
-                            <th>Количество</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productsTableBody"></tbody>
-                </table>
+                <div id="productsContainer">
+                    ${Object.keys(userDataOfProducts).map(function(key) {
+                        const productData = userDataOfProducts[key];
+                        return `
+                            <div class="product-item">
+                                <img src="${productData.product.photo}" alt="${productData.product.title}" width="300" height="300">
+                                <p>Название: ${productData.product.title}</p>
+                                <p>Количество: ${productData.quantity} штук</p>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
 
-                <script>
-                    console.log('JavaScript загружен');
-
-                    var productsData = ${JSON.stringify({ ownedProducts: userInstance.ownedProducts })};
-                    console.log('Полученные данные:', productsData);
-
-                    console.log('Тип productsData:', typeof productsData);
-                    console.log('Структура productsData:', JSON.stringify(productsData, null, 2));
-
-                    let tableBody = document.getElementById('productsTableBody');
-                    if (typeof productsData === 'object' && productsData !== null) {
-                        console.log('Объект productsData существует и не пустой');
-                        Object.keys(productsData.ownedProducts).forEach(function(key) {
-                            console.log('Добавлен продукт:', key, productsData.ownedProducts[key]);
-                            tableBody.innerHTML += '<tr><td>' + productsData.ownedProducts[key]['productId'] + '</td><td>' + productsData.ownedProducts[key]['quantity'] + '</td><td>';
-                        });
-                    } else {
-                        console.log('productsData не является объектом или пустой');
-                        tableBody.innerHTML = '<tr><td>Нет данных</td><td>Нет данных</td><td>Нет данных</td></tr>';
-                    }
-                </script>
+                <div>
+                    <a href="/account">Вернутся в личный кабинет</a>
+                </div>
             </body>
         `;
 
         res.send(html);
     } catch (error) {
-        console.error('Ошибка на эндпоинте ownedProducts:', error);
-        res.status(500).json({ error: 'Произошла ошибка при получении данных' });
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
     }
 });
-
 
 
 

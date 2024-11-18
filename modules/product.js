@@ -3,10 +3,11 @@ import PoolNamespace from "./pool.js";
 
 const ProductNamespace = {
     Product: class {
-        constructor(id, title, price) {
+        constructor(id, title, price, photo) {
             this.id = id;
             this.title = title;
             this.price = price;
+            this.photo = photo;
         }
     },
 
@@ -22,7 +23,7 @@ const ProductNamespace = {
 
         const productData = result.rows[0];
     
-        let productInstance = new this.Product(productData.id, productData.title, productData.price);
+        let productInstance = new this.Product(productData.id, productData.title, productData.price, productData.photo);
         return productInstance;
     }
 }
