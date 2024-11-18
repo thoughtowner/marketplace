@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Платформа для интернет-магазинов</title>
+</head>
+<body>
+    <div id="consumer-content">
+        <h1>Аккаунт "Покупатель"</h1>
+        <div>
+            <a href="/addMoneyToConsumer" class="btn btn-link">Пополнить счёт для покупок</a>
+        </div>
+        <div>
+            <a href="/account/cart" class="btn btn-link">Корзина</a>
+        </div>
+    </div>
+
+    <div id="producer-content">
+        <h1>Аккаунт "Продавец"</h1>
+        <div>
+            <a href="/reduceMoneyFromProducer" class="btn btn-link">Снять деньги со счёта для продаж</a>
+        </div>
+        <div>
+            <a href="/account/shop" class="btn btn-link">Мой магазин</a>
+        </div>
+    </div>
+
+    <div>
+        <a href="/ownedProducts" class="btn btn-link">Имеющиеся продукты</a>
+    </div>
+    <div>
+        <a href="/logout" class="btn btn-link">Выйти из системы</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/check-role')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.role === 'consumer') {
+                        document.getElementById('consumer-content').style.display = '';
+                        document.getElementById('producer-content').style.display = 'none';
+                    } else if (data.role === 'producer') {
+                        document.getElementById('consumer-content').style.display = 'none';
+                        document.getElementById('producer-content').style.display = '';
+                    }
+                })
+        });
+    </script>
+</body>
+</html>

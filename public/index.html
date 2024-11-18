@@ -3,14 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Место торговли</title>
+    <title>Платформа для интернет-магазинов</title>
 </head>
 <body>
-    <div>
-        <a href="/account" class="btn btn-link">Личный кабинет</a>
+    <div id="authorized-content">
+        <h1>Добро пожаловать!</h1>
+        <div>
+            <a href="/account" class="btn btn-link">Личный кабинет</a>
+        </div>
+        <div>
+            <a href="/shops" class="btn btn-link">Магазины</a>
+        </div>
     </div>
-    <div>
-        <a href="/shops" class="btn btn-link">Магазины</a>
+
+    <div id="unauthorized-content">
+        <h1>Вы не вошли в систему</h1>
+        <div>
+            <a href="/login" class="btn btn-link">Войти в систему</a>
+        </div>
+        <div>
+            <a href="/register" class="btn btn-link">Зарегистрироваться</a>
+        </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/check-auth')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.isAuth) {
+                        document.getElementById('authorized-content').style.display = '';
+                        document.getElementById('unauthorized-content').style.display = 'none';
+                    } else {
+                        document.getElementById('authorized-content').style.display = 'none';
+                        document.getElementById('unauthorized-content').style.display = '';
+                    }
+                })
+        });
+    </script>
 </body>
 </html>

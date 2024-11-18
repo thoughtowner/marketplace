@@ -204,6 +204,7 @@ const UserNamespace = {
         }
     },
 
+    // Можно переписать, т.к. в таблице users добавил поле role.
     async getInstanceById(userId) {
         const userResult = await PoolNamespace.pool.query(
             'SELECT * FROM users WHERE id = $1',

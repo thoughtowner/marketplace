@@ -2,6 +2,10 @@ import express from 'express';
 import pg from 'pg';
 import cors from 'cors';
 
+import bcrypt from 'bcrypt';
+import bodyParser from 'body-parser';
+import session from 'express-session';
+
 import UserNamespace from './modules/user.js';
 import ConsumerNamespace from './modules/consumer.js';
 import ProducerNamespace from './modules/producer.js';
@@ -10,8 +14,6 @@ import ShopNamespace from './modules/shop.js';
 import PoolNamespace from './modules/pool.js';
 import DelayNamespace from './modules/delay.js';
 
-import bcrypt from 'bcrypt';
-import bodyParser from 'body-parser';
 
 const app = express();
 const port = 8000;
@@ -20,6 +22,40 @@ app.use(cors());
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+
+
+app.use(session({
+    secret: 'your-secret-key',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { maxAge: 600000 } // Сессия на 10 минут
+}));
+
+app.get('/check-auth', (req, res) => {
+    if (req.session.user) {
+        res.json({ isAuth: true });
+    } else {
+        res.json({ isAuth: false });
+    }
+});
+
+app.get('/check-role', (req, res) => {
+    if (req.session.user.role === 'consumer') {
+        res.json({ role: 'consumer' });
+    } else if (req.session.user.role === 'producer') {
+        res.json({ role: 'producer' });
+    }
+});
+
+function checkAuth(req, res, next) {
+    if (req.session.user) {
+        next();
+    } else {
+        res.redirect('/login');
+    }
+}
+
 
 
 
@@ -32,6 +68,10 @@ app.post('/register', async (req, res) => {
     
     try {
         if (name && password && role) {
+            if (role !== 'consumer' && role !== 'producer') {
+                return res.status(401).json({ error: 'Неверно указана роль.' });
+            }
+
             const userCheck = await PoolNamespace.pool.query('SELECT * FROM users WHERE name = $1', [name]);
 
             if (userCheck.rows.length > 0) {
@@ -41,8 +81,8 @@ app.post('/register', async (req, res) => {
             const hashedPassword = await bcrypt.hash(password, 10);
 
             const userResult = await PoolNamespace.pool.query(
-                'INSERT INTO users (name, password) VALUES ($1, $2) RETURNING *;',
-                [name, hashedPassword]
+                'INSERT INTO users (name, password, role) VALUES ($1, $2, $3) RETURNING *;',
+                [name, hashedPassword, role]
             );
             await DelayNamespace.delay(100);
 
@@ -89,7 +129,7 @@ app.post('/login', async (req, res) => {
             const match = await bcrypt.compare(password, user.password);
     
             if (match) {
-                // req.session.user = name;
+                req.session.user = { name: name, role: user.role };
                 res.redirect('/');
             } else {
                 res.status(401).json({ error: 'Неверно указан пароль.' });
@@ -102,28 +142,19 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// app.get('/error', (req, res) => {
-//     let { error } = req.query;
-//     const errorObject = { message: error };
-//     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
-//         headers: { 'Content-Type': 'text/html' },
-//         body: JSON.stringify(errorObject)
-//     });
-// });
-
-// app.get('/callError', async (req, res) => {
-//     try {
-//         throw new Error('Что-то пошло не так')
-//     } catch (error) {
-//         const errorData = { message: error.message };
-//         res.redirect(`/error?message=${encodeURIComponent(JSON.stringify({ message: error.message }))}`);
-//     }
-// });
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/logout.html');
+});
 
 
 
 app.get('/', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/index.html');
+});
+
+app.get('/account', (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/account.html');
 });
 
 
@@ -237,7 +268,7 @@ app.get('/products/:productId', async (req, res) => {
 
 
 
-app.put('/addMoneyToConsumer/users/:userID', async (req, res) => {
+app.put('/addMoneyToConsumer/users/:userID', checkAuth, async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
 
@@ -259,7 +290,7 @@ app.put('/addMoneyToConsumer/users/:userID', async (req, res) => {
     }
 });
 
-app.put('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
+app.put('/reduceMoneyFromProducer/users/:userID', checkAuth, async (req, res) => {
     const { userID } = req.params;
     const { money } = req.body;
 
@@ -281,7 +312,7 @@ app.put('/reduceMoneyFromProducer/users/:userID', async (req, res) => {
     }
 });
 
-app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
+app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', checkAuth, async (req, res) => {
     const { shopId, productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -305,7 +336,7 @@ app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userID', as
     }
 });
 
-app.put('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID', async (req, res) => {
+app.put('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID', checkAuth, async (req, res) => {
     const { shopId, productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -329,7 +360,28 @@ app.put('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userID'
     }
 });
 
-app.post('/addProductToShop/products/:productId/users/:userID', async (req, res) => {
+app.post('/buyProducts/users/:userID', checkAuth, async (req, res) => {
+    const { userID } = req.params;
+
+    try {
+        if (userID) {
+            let userInstance = await UserNamespace.getInstanceById(userID);
+
+            await userInstance.buyProducts();
+            await DelayNamespace.delay(100);
+
+            userInstance = await UserNamespace.getInstanceById(userID);
+            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+        } else {
+            res.status(400).json({ 'error': 'Неверно указан ID пользователя.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+app.post('/addProductToShop/products/:productId/users/:userID', checkAuth, async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -352,7 +404,7 @@ app.post('/addProductToShop/products/:productId/users/:userID', async (req, res)
     }
 });
 
-app.put('/reduceProductFromShop/products/:productId/users/:userID', async (req, res) => {
+app.put('/reduceProductFromShop/products/:productId/users/:userID', checkAuth, async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
 
@@ -375,7 +427,7 @@ app.put('/reduceProductFromShop/products/:productId/users/:userID', async (req, 
     }
 });
 
-app.delete('/deleteProductFromShop/products/:productId/users/:userID', async (req, res) => {
+app.delete('/deleteProductFromShop/products/:productId/users/:userID', checkAuth, async (req, res) => {
     const { productId, userID } = req.params;
 
     try {
@@ -397,28 +449,7 @@ app.delete('/deleteProductFromShop/products/:productId/users/:userID', async (re
     }
 });
 
-app.post('/buyProducts/users/:userID', async (req, res) => {
-    const { userID } = req.params;
-
-    try {
-        if (userID) {
-            let userInstance = await UserNamespace.getInstanceById(userID);
-
-            await userInstance.buyProducts();
-            await DelayNamespace.delay(100);
-
-            userInstance = await UserNamespace.getInstanceById(userID);
-            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID пользователя.' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
-
-app.post('/addNewProductToOwned/users/:userID', async (req, res) => {
+app.post('/addNewProductToOwned/users/:userID', checkAuth, async (req, res) => {
     const { userID } = req.params;
     const { title, price, quantity } = req.body;
 
@@ -450,7 +481,7 @@ app.post('/addNewProductToOwned/users/:userID', async (req, res) => {
     }
 });
 
-app.post('/addOwnedProductToOwned/products/:productId/users/:userID', async (req, res) => {
+app.post('/addOwnedProductToOwned/products/:productId/users/:userID', checkAuth, async (req, res) => {
     const { productId, userID } = req.params;
     const { quantity } = req.body;
 
