@@ -22,7 +22,7 @@
             <a href="/reduceMoneyFromProducer" class="btn btn-link">Снять деньги со счёта для продаж</a>
         </div>
         <div>
-            <a href="/account/shop" class="btn btn-link">Мой магазин</a>
+            <a href="/shops/" class="btn btn-link">Мой магазин</a>
         </div>
     </div>
 
@@ -44,6 +44,7 @@
                     } else if (data.role === 'producer') {
                         document.getElementById('consumer-content').style.display = 'none';
                         document.getElementById('producer-content').style.display = '';
+                        document.querySelector('#producer-content a[href="/shops/"]').href = `/shops/${data.shopId}`;
                     }
                 })
         });

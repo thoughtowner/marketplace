@@ -40,11 +40,13 @@ app.get('/check-auth', (req, res) => {
     }
 });
 
-app.get('/check-role', (req, res) => {
+app.get('/check-role', async (req, res) => {
     if (req.session.user.role === 'consumer') {
         res.json({ role: 'consumer' });
     } else if (req.session.user.role === 'producer') {
-        res.json({ role: 'producer' });
+        const producerResult = await PoolNamespace.pool.query('SELECT * FROM producers WHERE user_id = $1', [req.session.user.id]);
+        const shopResult = await PoolNamespace.pool.query('SELECT * FROM shops WHERE producer_id = $1', [producerResult.rows[0].id]);
+        res.json({ role: 'producer', shopId: shopResult.rows[0].id });
     }
 });
 
@@ -178,71 +180,6 @@ app.get('/error', (req, res) => {
         body: JSON.stringify(errorObject)
     });
 });
-
-// app.get('/callError', async (req, res) => {
-//     try {
-//         throw new Error('Что-то пошло не так')
-//     } catch (error) {
-//         const user = req.session.user;
-//         const userInstance = await UserNamespace.getInstanceById(user.id);
-//         const errorData = { message: userInstance};
-//         // res.redirect(`/error?message=${encodeURIComponent(JSON.stringify(errorData))}`);
-//         res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
-//             headers: { 'Content-Type': 'text/html' },
-//             body: JSON.stringify(errorData)
-//         });
-//     }
-// });
-
-
-// app.get('/error', (req, res) => {
-//     let { error } = req.query;
-//     const errorObject = { message: error };
-//     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
-//         headers: { 'Content-Type': 'text/html' },
-//         body: JSON.stringify(errorObject)
-//     });
-// });
-
-// app.get('/callError', async (req, res) => {
-//     try {
-//         throw new Error('Что-то пошло не так')
-//     } catch (error) {
-//         const errorData = { message: error.message };
-//         res.redirect(`/error?message=${encodeURIComponent(JSON.stringify(errorData))}`);
-//     }
-// });
-
-// app.get('/callError', async (req, res) => {
-//     try {
-//         throw new Error('Что-то пошло не так')
-//     } catch (error) {
-//         const errorData = { message: error.message };
-        
-//         // Создаем заголовок с данными ошибки
-//         const errorHeader = {
-//             'Content-Type': 'text/html'
-//         };
-
-//         // Отправляем файл с добавленным заголовком
-//         res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
-//             headers: { 'Content-Type': 'text/html' },
-//             body: JSON.stringify(errorData)
-//         });
-//     }
-// });
-
-// app.get('/callError', async (req, res) => {
-//     try {
-//         throw new Error('Что-то пошло не так')
-//     } catch (error) {
-//         const errorData = { message: error.message };
-//         res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
-//             headers: { 'Content-Type': 'text/html' },
-//             body: JSON.stringify(errorData)
-//         });
-//     }
-// });
 
 app.get('/account/ownedProducts', async (req, res) => {
     try {
