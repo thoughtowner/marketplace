@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список магазинов</title>
+</head>
+<body>
+    <h1>Список магазинов</h1>
+    
+    <ul id="shopsList"></ul>
+
+    <script>
+        fetch('/api/shops')
+            .then(response => response.json())
+            .then(shops => {
+                const listElement = document.getElementById('shopsList');
+                
+                shops.forEach(shop => {
+                    const li = document.createElement('li');
+                    li.className = 'shop-item';
+
+                    const nameA = document.createElement('a');
+                    nameA.className = 'shop-name';
+                    nameA.href = `/shops/${shop.id}`;
+                    nameA.textContent = shop.title;
+                    console.log(nameA);
+                    
+                    li.appendChild(nameA);
+                    
+                    listElement.appendChild(li);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+                const listElement = document.getElementById('shopsList');
+                listElement.innerHTML = '<li>Не удалось загрузить список магазинов</li>';
+            });
+    </script>
+
+    <div>
+        <a href="/account" class="btn btn-link">Личный кабинет</a>
+    </div>
+    <div>
+        <a href="/shops" class="btn btn-link">Магазины</a>
+    </div>
+</body>
+</html>

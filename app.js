@@ -246,6 +246,10 @@ app.get('/account/ownedProducts', async (req, res) => {
 
 
 
+app.get('/shops', async (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/shops.html');
+});
+
 app.get('/users', async (req, res) => {
     const result = await PoolNamespace.pool.query('SELECT * FROM users;');
     res.status(200).json(result.rows);
@@ -261,7 +265,7 @@ app.get('/producers', async (req, res) => {
     res.status(200).json(result.rows);
 });
 
-app.get('/shops', async (req, res) => {
+app.get('/api/shops', async (req, res) => {
     const result = await PoolNamespace.pool.query('SELECT * FROM shops;');
     res.status(200).json(result.rows);
 });
@@ -322,6 +326,10 @@ app.get('/producers/:producerId', async (req, res) => {
 });
 
 app.get('/shops/:shopId', async (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/shop.html');
+});
+
+app.get('/api/shops/:shopId', async (req, res) => {
     const { shopId } = req.params;
 
     try {

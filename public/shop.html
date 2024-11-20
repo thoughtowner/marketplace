@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог магазина </title>
+</head>
+<body>
+    <div id="shopInfo"></div>
+
+    <script>
+        const shopId = window.location.pathname.split('/')[2];
+        
+        fetch(`/api/shops/${shopId}`)
+            .then(response => response.json())
+            .then(data => {
+                const shopInfoElement = document.getElementById('shopInfo');
+                
+                if (!data.shop) {
+                    shopInfoElement.innerHTML = '<p>Информация о магазине не найдена.</p>';
+                } else {
+                    const titleElement = document.createElement('h2');
+                    titleElement.textContent = `Каталог магазина "${data.shop.title}"`;
+
+                    const productNames = data.shop.catalog.map(product => product.productId);
+                    const productListElement = document.createElement('ul');
+                    productListElement.id = 'productList';
+
+                    productNames.forEach(productId => {
+                        const productElement = document.createElement('li');
+                        productElement.textContent = `${productId}:`;
+                        productListElement.appendChild(productElement);
+                    });
+
+                    const shopInfoDiv = document.createElement('div');
+                    shopInfoDiv.id = 'shopInfo';
+                    shopInfoDiv.appendChild(titleElement);
+                    shopInfoDiv.appendChild(productListElement);
+
+                    shopInfoElement.innerHTML = '';
+                    shopInfoElement.appendChild(shopInfoDiv);
+
+                    document.title = `Каталог магазина ${data.shop.title}`;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+                const shopInfoElement = document.getElementById('shopInfo');
+                shopInfoElement.innerHTML = '<p>Не удалось загрузить информацию о магазине.</p>';
+            });
+    </script>
+
+    <div>
+        <a href="/account" class="btn btn-link">Личный кабинет</a>
+    </div>
+    <div>
+        <a href="/shops" class="btn btn-link">Магазины</a>
+    </div>
+</body>
+</html>
