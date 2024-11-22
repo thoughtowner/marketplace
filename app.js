@@ -171,6 +171,43 @@ app.get('/account', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/account.html');
 });
 
+app.get('/account/cart', (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/cart.html');
+});
+
+app.get('/api/cart', async (req, res) => {
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ error: 'Пользователь не авторизован' });
+    }
+
+    try {
+        const userInstance = await UserNamespace.getInstanceById(user.id);
+        const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
+
+        const cartDetails = await Promise.all(consumerInstance.cart.map(async (item) => {
+            const product = await ProductNamespace.getInstanceById(item.productId);
+            const shop = await ShopNamespace.getInstanceById(item.shopId);
+
+            return {
+                productId: item.productId,
+                productName: product.title,
+                productPhoto: product.photo,
+                quantity: item.quantity,
+                shopName: shop.title,
+                price: product.price,
+                cost: product.price * item.quantity
+            };
+        }));
+
+        res.json({ cart: cartDetails });
+    } catch (error) {
+        console.error('Ошибка при получении корзины:', error);
+        res.status(500).json({ error: 'Не удалось получить корзину.' });
+    }
+});
+
+
 
 app.get('/account/ownedProducts', async (req, res) => {
     try {
@@ -373,6 +410,7 @@ app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async
         if (!user) {
             throw new Error('Пользователь не авторизован');
         }
+        
         if (shopId && productId && quantity) {
             let shopInstance = await ShopNamespace.getInstanceById(shopId);
             const productInstance = await ProductNamespace.getInstanceById(productId);
@@ -392,15 +430,20 @@ app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async
     }
 });
 
-app.put('/putOutProductFromCart/shops/:shopId/products/:productId/users/:userId', checkAuth, async (req, res) => {
-    const { shopId, productId, userId } = req.params;
+app.put('/putOutProductFromCart/shops/:shopId/products/:productId', checkAuth, async (req, res) => {
+    const { shopId, productId } = req.params;
     const { quantity } = req.body;
 
     try {
-        if (shopId && productId&& userId && quantity) {
+        const user = req.session.user;
+        if (!user) {
+            throw new Error('Пользователь не авторизован');
+        }
+
+        if (shopId && productId && quantity) {
             let shopInstance = await ShopNamespace.getInstanceById(shopId);
             const productInstance = await ProductNamespace.getInstanceById(productId);
-            const userInstance = await UserNamespace.getInstanceById(userId);
+            const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.putOutProductFromCart(shopInstance, productInstance, quantity);
             await DelayNamespace.delay(100);

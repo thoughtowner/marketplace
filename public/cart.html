@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корзина покупок</title>
+</head>
+<body>
+    <h2>Корзина покупок</h2>
+
+    <div id="cartInfo"></div>
+
+    <div>
+        <a href="/account" class="btn btn-link">Личный кабинет</a>
+    </div>
+    <div>
+        <a href="/shops" class="btn btn-link">Вернуться к магазинам</a>
+    </div>
+
+    <script>
+        fetch('/api/cart')
+            .then(response => response.json())
+            .then(data => {
+                const cartInfoDiv = document.getElementById('cartInfo');
+
+                if (!data.cart || data.cart.length === 0) {
+                    cartInfoDiv.innerHTML = '<p>Ваша корзина пуста.</p>';
+                    return;
+                }
+
+                const titleElement = document.createElement('h2');
+
+                const productCards = data.cart.map(item => 
+                    `
+                        <div class="product-card">
+                            <a href="/shops/${item.shopId}/products/${item.productId}">
+                                <img src="${item.productPhoto}" alt="${item.productName}" width="300" height="300">
+                            </a>
+                            <p><strong>${item.productName}</strong></p>
+                            <p>Магазин: ${item.shopName}</p>
+                            <p>Количество: ${item.quantity}</p>
+                            <p>Цена: ${item.price} руб.</p>
+                            <p>Стоимость: ${item.cost} руб.</p>
+                            <br>
+                        </div>
+                    `
+                );
+
+                const productListElement = document.createElement('div');
+                productListElement.id = 'productList';
+
+                productCards.forEach(cardHtml => {
+                    const productCardElement = document.createElement('div');
+                    productCardElement.innerHTML = cardHtml;
+                    productListElement.appendChild(productCardElement);
+                });
+
+                cartInfoDiv.innerHTML = '';
+                cartInfoDiv.appendChild(titleElement);
+                cartInfoDiv.appendChild(productListElement);
+
+                document.title = `Корзина покупок ${data.consumerName}`;
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке корзины:', error);
+                document.getElementById('cartInfo').innerHTML = '<p>Не удалось загрузить корзину.</p>';
+            });
+    </script>
+
+</body>
+</html>
