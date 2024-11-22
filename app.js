@@ -163,7 +163,6 @@ app.get('/logout', (req, res) => {
 });
 
 
-
 app.get('/', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/index.html');
 });
@@ -172,14 +171,6 @@ app.get('/account', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/account.html');
 });
 
-app.get('/error', (req, res) => {
-    let { error } = req.query;
-    const errorObject = { message: error };
-    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/error.html', {
-        headers: { 'Content-Type': 'text/html' },
-        body: JSON.stringify(errorObject)
-    });
-});
 
 app.get('/account/ownedProducts', async (req, res) => {
     try {
@@ -245,24 +236,8 @@ app.get('/account/ownedProducts', async (req, res) => {
 });
 
 
-
 app.get('/shops', async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/shops.html');
-});
-
-app.get('/users', async (req, res) => {
-    const result = await PoolNamespace.pool.query('SELECT * FROM users;');
-    res.status(200).json(result.rows);
-});
-
-app.get('/consumers', async (req, res) => {
-    const result = await PoolNamespace.pool.query('SELECT * FROM consumers;');
-    res.status(200).json(result.rows);
-});
-
-app.get('/producers', async (req, res) => {
-    const result = await PoolNamespace.pool.query('SELECT * FROM producers;');
-    res.status(200).json(result.rows);
 });
 
 app.get('/api/shops', async (req, res) => {
@@ -270,60 +245,6 @@ app.get('/api/shops', async (req, res) => {
     res.status(200).json(result.rows);
 });
 
-app.get('/products', async (req, res) => {
-    const result = await PoolNamespace.pool.query('SELECT * FROM products;');
-    res.status(200).json(result.rows);
-});
-
-
-
-app.get('/users/:userId', async (req, res) => {
-    const { userId } = req.params;
-
-    try {
-        if (userId) {
-            const user = await UserNamespace.getInstanceById(userId);
-            res.status(200).json({ user: user });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID пользователя.' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
-
-app.get('/consumers/:consumerId', async (req, res) => {
-    const { consumerId } = req.params;
-
-    try {
-        if (consumerId) {
-            const consumer = await ConsumerNamespace.getInstanceById(consumerId);
-            res.status(200).json({ consumer: consumer });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID акаунта покупателя.' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
-
-app.get('/producers/:producerId', async (req, res) => {
-    const { producerId } = req.params;
-
-    try {
-        if (producerId) {
-            const producer = await ProducerNamespace.getInstanceById(producerId);
-            res.status(200).json({ producer: producer });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID акаунта продавца.' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
-    }
-});
 
 app.get('/shops/:shopId', async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/shop.html');
@@ -359,9 +280,6 @@ app.get('/api/shops/:shopId', async (req, res) => {
     }
 });
 
-app.get('/shops/:shopId/products/:productId', async (req, res) => {
-    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/product.html');
-});
 
 app.get('/shops/:shopId/products/:productId', async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/product.html');
@@ -379,23 +297,6 @@ app.get('/api/shops/:shopId/products/:productId', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
-    }
-});
-
-
-app.get('/products/:productId', async (req, res) => {
-    const { productId } = req.params;
-
-    try {
-        if (productId) {
-            const product = await ProductNamespace.getInstanceById(productId);
-            res.status(200).json({ product: product });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID продукта.' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
     }
 });
 
@@ -445,15 +346,19 @@ app.put('/reduceMoneyFromProducer/users/:userId', checkAuth, async (req, res) =>
     }
 });
 
-app.post('/putProductToCart/shops/:shopId/products/:productId/users/:userId', checkAuth, async (req, res) => {
-    const { shopId, productId, userId } = req.params;
+app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async (req, res) => {
+    const { shopId, productId } = req.params;
     const { quantity } = req.body;
 
     try {
-        if (shopId && productId && userId && quantity) {
+        const user = req.session.user;
+        if (!user) {
+            throw new Error('Пользователь не авторизован');
+        }
+        if (shopId && productId && quantity) {
             let shopInstance = await ShopNamespace.getInstanceById(shopId);
             const productInstance = await ProductNamespace.getInstanceById(productId);
-            const userInstance = await UserNamespace.getInstanceById(userId);
+            const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.putProductToCart(shopInstance, productInstance, quantity);
             await DelayNamespace.delay(100);
