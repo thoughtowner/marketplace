@@ -332,13 +332,22 @@ app.put('/addMoneyToConsumer', async (req, res) => {
     }
 });
 
-app.put('/reduceMoneyFromProducer/users/:userId', checkAuth, async (req, res) => {
-    const { userId } = req.params;
+
+app.get('/account/reduceMoneyFromProducer', async (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/reduceMoneyFromProducer.html');
+});
+
+app.put('/reduceMoneyFromProducer', async (req, res) => {
     const { money } = req.body;
 
     try {
-        if (userId && money) {
-            const userInstance = await UserNamespace.getInstanceById(userId);
+        const user = req.session.user;
+        if (!user) {
+            throw new Error('Пользователь не авторизован');
+        }
+
+        if (money) {
+            const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.reduceMoneyFromProducer(money);
             await DelayNamespace.delay(100);
@@ -346,13 +355,14 @@ app.put('/reduceMoneyFromProducer/users/:userId', checkAuth, async (req, res) =>
             const producerInstance = await ProducerNamespace.getInstanceById(userInstance.producerId);
             res.status(200).json({ producerMoney: producerInstance.money });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID пользователя, количество денег.' });
+            res.status(400).json({ 'error': 'Не передано количество денег.' });
         }
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
     }
 });
+
 
 app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async (req, res) => {
     const { shopId, productId } = req.params;

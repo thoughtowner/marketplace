@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Пополнить счет</title>
+    <title>Уменьшение суммы</title>
 </head>
 <body>
-    <h2>Пополнение счета покупателя</h2>
+    <h2>Уменьшение суммы на счете продюсера</h2>
 
-    <form id="addMoneyForm">
-        <label for="money">Введите сумму для пополнения:</label>
+    <form id="reduceMoneyForm">
+        <label for="money">Введите сумму для уменьшения:</label>
         <input type="number" id="money" name="money" min="1" step="0.01" required>
-        <button type="submit">Пополнить</button>
+        <button type="submit">Уменьшить</button>
     </form>
 
     <div id="message"></div>
@@ -21,7 +21,7 @@
     </div>
 
     <script>
-        document.getElementById('addMoneyForm').addEventListener('submit', function (event) {
+        document.getElementById('reduceMoneyForm').addEventListener('submit', function (event) {
             event.preventDefault();
 
             const money = Number(document.getElementById('money').value);
@@ -31,7 +31,7 @@
                 return;
             }
 
-            fetch('/addMoneyToConsumer', {
+            fetch('/reduceMoneyFromProducer', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -40,15 +40,15 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.consumerMoney !== undefined) {
-                    document.getElementById('message').innerHTML = `Ваш счет пополнен. Текущий баланс: ${data.consumerMoney} руб.`;
+                if (data.producerMoney !== undefined) {
+                    document.getElementById('message').innerHTML = `Ваш счет был уменьшен. Текущий баланс: ${data.producerMoney} руб.`;
                 } else if (data.error) {
                     document.getElementById('message').innerHTML = `Ошибка: ${data.error}`;
                 }
             })
             .catch(error => {
-                console.error('Ошибка при пополнении счета:', error);
-                document.getElementById('message').innerHTML = 'Не удалось пополнить счет. Попробуйте позже.';
+                console.error('Ошибка при уменьшении суммы:', error);
+                document.getElementById('message').innerHTML = 'Не удалось уменьшить сумму. Попробуйте позже.';
             });
         });
     </script>
