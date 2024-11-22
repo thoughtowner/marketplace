@@ -14,21 +14,28 @@
         fetch(`/api/shops/${shopId}`)
             .then(response => response.json())
             .then(data => {
-                const shopInfoElement = document.getElementById('shopInfo');
-                
-                if (!data.shop) {
-                    shopInfoElement.innerHTML = '<p>Информация о магазине не найдена.</p>';
+                if (!data.shop || !data.catalog || data.catalog.length === 0) {
+                    document.getElementById('shopInfo').innerHTML = '<p>Информация о магазине не найдена.</p>';
                 } else {
                     const titleElement = document.createElement('h2');
                     titleElement.textContent = `Каталог магазина "${data.shop.title}"`;
 
-                    const productNames = data.shop.catalog.map(product => product.productId);
+                    const productNames = data.catalog.map(product => 
+                        `
+                            <a href="/shops/${shopId}/products/${product.id}"><img src=${product.photo} alt="${product.title}" width="300" height="300"></a>
+                            <p>${product.title}</p>
+                            <p>Общее количество: ${product.totalQuantity} штук</p>
+                            <p>Доступное к покупке количество: ${product.totalQuantity - product.quantityInCarts} штук</p>
+                            <br>
+                        `
+                    );
+
                     const productListElement = document.createElement('ul');
                     productListElement.id = 'productList';
 
-                    productNames.forEach(productId => {
-                        const productElement = document.createElement('li');
-                        productElement.textContent = `${productId}:`;
+                    productNames.forEach(item => {
+                        const productElement = document.createElement('div');
+                        productElement.innerHTML = item;
                         productListElement.appendChild(productElement);
                     });
 
@@ -37,8 +44,71 @@
                     shopInfoDiv.appendChild(titleElement);
                     shopInfoDiv.appendChild(productListElement);
 
-                    shopInfoElement.innerHTML = '';
-                    shopInfoElement.appendChild(shopInfoDiv);
+                    document.getElementById('shopInfo').innerHTML = '';
+                    document.getElementById('shopInfo').appendChild(shopInfoDiv);
+
+                    document.title = `Каталог магазина ${data.shop.title}`;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+                document.getElementById('shopInfo').innerHTML = '<p>Не удалось загрузить информацию о магазине.</p>';
+            });
+    </script>
+
+    <div>
+        <a href="/account" class="btn btn-link">Личный кабинет</a>
+    </div>
+    <div>
+        <a href="/shops" class="btn btn-link">Магазины</a>
+    </div>
+</body>
+</html>
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог магазина </title>
+</head>
+<body>
+    <div id="shopInfo"></div>
+
+    <script>
+        const shopId = window.location.pathname.split('/')[2];
+        
+        fetch(`/api/shops/${shopId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.shop) {
+                    document.getElementById('shopInfo').innerHTML = '<p>Информация о магазине не найдена.</p>';
+                } else {
+                    const titleElement = document.createElement('h2');
+                    titleElement.textContent = `Каталог магазина "${data.shop.title}"`;
+
+                    const productNames = data.catalog.map(product => 
+                        `<li>${product.title}</li>`
+                    );
+
+                    const productListElement = document.createElement('ul');
+                    productListElement.id = 'productList';
+
+                    productNames.forEach(item => {
+                        const productElement = document.createElement('li');
+                        productElement.innerHTML = item;
+                        productListElement.appendChild(productElement);
+                    });
+
+                    const shopInfoDiv = document.createElement('div');
+                    shopInfoDiv.id = 'shopInfo';
+                    shopInfoDiv.appendChild(titleElement);
+                    shopInfoDiv.appendChild(productListElement);
+
+                    document.getElementById('shopInfo').innerHTML = '';
+                    document.getElementById('shopInfo').appendChild(shopInfoDiv);
 
                     document.title = `Каталог магазина ${data.shop.title}`;
                 }
@@ -51,10 +121,10 @@
     </script>
 
     <div>
-        <a href="/account" class="btn btn-link">Личный кабинет</a>
+        <a href="/shops" class="btn btn-link">Вернуться к списку магазинов</a>
     </div>
     <div>
-        <a href="/shops" class="btn btn-link">Магазины</a>
+        <a href="/account" class="btn btn-link">Личный кабинет</a>
     </div>
 </body>
-</html>
+</html> -->

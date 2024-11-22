@@ -329,19 +329,33 @@ app.get('/shops/:shopId', async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/shop.html');
 });
 
-app.get('/api/shops/:shopId', async (req, res) => {
-    const { shopId } = req.params;
-
+app.get('/api/shops/:id', async (req, res) => {
+    const shopId = req.params.id;
+    
     try {
-        if (shopId) {
-            const shop = await ShopNamespace.getInstanceById(shopId);
-            res.status(200).json({ shop: shop });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID магазина.' });
+        const shopData = await ShopNamespace.getInstanceById(shopId);
+
+        if (!shopData || !shopData.catalog || shopData.catalog.length === 0) {
+            return res.status(404).json({ error: 'Магазин не найден или пуст' });
         }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ 'error': error.message });
+
+        const productPromises = shopData.catalog.map(async (productData) => {
+            try {
+                const product = await ProductNamespace.getInstanceById(productData.productId);
+                
+                return { id: product.id, title: product.title, photo: product.photo, totalQuantity: productData.totalQuantity, quantityInCarts: productData.quantityInCarts};
+            } catch (error) {
+                console.error(`Ошибка при получении товара с id ${productData.productId}:`, error);
+                return { productId: productData.productId, title: `Товар не найден (${productData.productId})`, category: '' };
+            }
+        });
+
+        const products = await Promise.all(productPromises);
+
+        res.json({ shop: shopData, catalog: products });
+    } catch (err) {
+        console.error('Ошибка при обработке запроса:', err);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера', details: err.message });
     }
 });
 
