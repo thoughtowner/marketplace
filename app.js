@@ -302,13 +302,21 @@ app.get('/api/shops/:shopId/products/:productId', async (req, res) => {
 
 
 
-app.put('/addMoneyToConsumer/users/:userId', checkAuth, async (req, res) => {
-    const { userId } = req.params;
+app.get('/account/addMoneyToConsumer', async (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/addMoneyToConsumer.html');
+});
+
+app.put('/addMoneyToConsumer', async (req, res) => {
     const { money } = req.body;
 
     try {
-        if (userId && money) {
-            const userInstance = await UserNamespace.getInstanceById(userId);
+        const user = req.session.user;
+        if (!user) {
+            throw new Error('Пользователь не авторизован');
+        }
+
+        if (money) {
+            const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.addMoneyToConsumer(money);
             await DelayNamespace.delay(100);
@@ -316,7 +324,7 @@ app.put('/addMoneyToConsumer/users/:userId', checkAuth, async (req, res) => {
             const consumerInstance = await ConsumerNamespace.getInstanceById(userInstance.consumerId);
             res.status(200).json({ consumerMoney: consumerInstance.money });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID пользователя, количество денег.' });
+            res.status(400).json({ 'error': 'Не передано количество денег.' });
         }
     } catch (error) {
         console.error(error);

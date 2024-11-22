@@ -7,106 +7,12 @@
 </head>
 <body>
     <div id="productInfo"></div>
-
-    <div>
-        <form id="addToCartForm">
-            <label for="quantity">Количество:</label>
-            <input type="number" id="quantity" name="quantity" min="1" required>
-            <button type="submit">Добавить в корзину</button>
-        </form>
+    <div id="addToCartForm" style="display: none;">
+        <h3>Добавить в корзину</h3>
+        <label for="quantity">Количество:</label>
+        <input type="number" id="quantity" min="1" max="100" value="1">
+        <button id="addToCartButton">Добавить в корзину</button>
     </div>
-
-    <script>
-        const shopId = window.location.pathname.split('/')[2];
-        const productId = window.location.pathname.split('/')[4];
-
-        fetch(`/api/shops/${shopId}/products/${productId}`)
-            .then(response => response.json())
-            .then(data => {
-                const product = data.product;
-                const shopToProduct = data.shopToProduct;
-
-                if (!product) {
-                    document.getElementById('productInfo').innerHTML = '<p>Информация о продукте не найдена.</p>';
-                } else {
-                    const titleElement = document.createElement('h2');
-                    titleElement.textContent = `Продукт: ${product.title}`;
-
-                    const photoElement = document.createElement('img');
-                    photoElement.src = product.photo;
-                    photoElement.alt = product.title;
-                    photoElement.width = 300;
-                    photoElement.height = 300;
-
-                    const priceElement = document.createElement('p');
-                    priceElement.textContent = `Цена: ${product.price} руб.`;
-
-                    const quantityElement = document.createElement('p');
-                    quantityElement.textContent = `Доступное количество: ${shopToProduct.total_quantity}`;
-
-                    const availableElement = document.createElement('p');
-                    availableElement.textContent = `Доступное к покупке количество: ${shopToProduct.total_quantity - shopToProduct.quantity_in_carts}`;
-
-                    const productDetailsDiv = document.createElement('div');
-                    productDetailsDiv.appendChild(titleElement);
-                    productDetailsDiv.appendChild(photoElement);
-                    productDetailsDiv.appendChild(priceElement);
-                    productDetailsDiv.appendChild(quantityElement);
-                    productDetailsDiv.appendChild(availableElement);
-
-                    document.getElementById('productInfo').innerHTML = '';
-                    document.getElementById('productInfo').appendChild(productDetailsDiv);
-
-                    const backToShopLink = document.getElementById('backToShop');
-                    backToShopLink.href = `/shops/${shopId}`;
-
-                    document.title = `Информация о продукте ${product.title}`;
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при получении данных о продукте:', error);
-                document.getElementById('productInfo').innerHTML = '<p>Не удалось загрузить информацию о продукте.</p>';
-            });
-
-        // Обработчик отправки формы для добавления в корзину
-        document.getElementById('addToCartForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Предотвращаем стандартное поведение формы
-
-            const quantity = Number(document.getElementById('quantity').value);
-
-            console.log(typeof quantity);
-
-            // Проверка, что количество указано
-            if (!quantity || quantity <= 0) {
-                alert('Пожалуйста, укажите корректное количество.');
-                return;
-            }
-
-            // Отправляем запрос на сервер для добавления товара в корзину
-            fetch(`/putProductToCart/shops/${shopId}/products/${productId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    quantity: quantity
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.consumerCart) {
-                    alert('Продукт успешно добавлен в корзину!');
-                    console.log(data.consumerCart); // Можем отобразить обновленную корзину, если нужно
-                } else {
-                    alert('Не удалось добавить продукт в корзину.');
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при добавлении в корзину:', error);
-                alert('Произошла ошибка при добавлении товара в корзину.');
-            });
-        });
-    </script>
 
     <div>
         <a href="/account" class="btn btn-link">Личный кабинет</a>
@@ -114,5 +20,94 @@
     <div>
         <a id="backToShop" class="btn btn-link">Вернуться к продуктам магазина</a>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const shopId = window.location.pathname.split('/')[2];
+            const productId = window.location.pathname.split('/')[4];
+
+            fetch(`/api/shops/${shopId}/products/${productId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const product = data.product;
+                    const shopToProduct = data.shopToProduct;
+
+                    if (!product) {
+                        document.getElementById('productInfo').innerHTML = '<p>Информация о продукте не найдена.</p>';
+                    } else {
+                        const titleElement = document.createElement('h2');
+                        titleElement.textContent = `Продукт: ${product.title}`;
+
+                        const photoElement = document.createElement('img');
+                        photoElement.src = product.photo;
+                        photoElement.alt = product.title;
+                        photoElement.width = 300;
+                        photoElement.height = 300;
+
+                        const priceElement = document.createElement('p');
+                        priceElement.textContent = `Цена: ${product.price} руб.`;
+
+                        const quantityElement = document.createElement('p');
+                        quantityElement.textContent = `Общее количество: ${shopToProduct.total_quantity}`;
+
+                        const availableElement = document.createElement('p');
+                        availableElement.textContent = `Доступно к покупке: ${shopToProduct.total_quantity - shopToProduct.quantity_in_carts}`;
+
+                        const productDetailsDiv = document.createElement('div');
+                        productDetailsDiv.appendChild(titleElement);
+                        productDetailsDiv.appendChild(photoElement);
+                        productDetailsDiv.appendChild(priceElement);
+                        productDetailsDiv.appendChild(quantityElement);
+                        productDetailsDiv.appendChild(availableElement);
+
+                        document.getElementById('productInfo').innerHTML = '';
+                        document.getElementById('productInfo').appendChild(productDetailsDiv);
+
+                        const backToShopLink = document.getElementById('backToShop');
+                        backToShopLink.href = `/shops/${shopId}`;
+
+                        document.title = `Информация о продукте ${product.title}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при получении данных о продукте:', error);
+                    document.getElementById('productInfo').innerHTML = '<p>Не удалось загрузить информацию о продукте.</p>';
+                });
+
+            fetch('/check-role')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.role === 'consumer') {
+                        document.getElementById('addToCartForm').style.display = '';
+
+                        document.getElementById('addToCartButton').addEventListener('click', function() {
+                            const quantity = parseInt(document.getElementById('quantity').value, 10);
+                            if (isNaN(quantity) || quantity <= 0) {
+                                alert('Пожалуйста, введите корректное количество.');
+                                return;
+                            }
+
+                            fetch(`/putProductToCart/shops/${shopId}/products/${productId}/users/${data.userId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ quantity: quantity })
+                            })
+                            .then(response => response.json())
+                            .then(cartData => {
+                                alert('Товар добавлен в корзину!');
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при добавлении товара в корзину:', error);
+                                alert('Не удалось добавить товар в корзину.');
+                            });
+                        });
+                    } else {
+                        document.getElementById('addToCartForm').style.display = 'none';
+                    }
+                });
+        });
+    </script>
 </body>
 </html>
