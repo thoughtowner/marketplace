@@ -329,8 +329,8 @@ app.get('/shops/:shopId', async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/shop.html');
 });
 
-app.get('/api/shops/:id', async (req, res) => {
-    const shopId = req.params.id;
+app.get('/api/shops/:shopId', async (req, res) => {
+    const { shopId } = req.params;
     
     try {
         const shopData = await ShopNamespace.getInstanceById(shopId);
@@ -353,11 +353,35 @@ app.get('/api/shops/:id', async (req, res) => {
         const products = await Promise.all(productPromises);
 
         res.json({ shop: shopData, catalog: products });
-    } catch (err) {
-        console.error('Ошибка при обработке запроса:', err);
-        res.status(500).json({ error: 'Внутренняя ошибка сервера', details: err.message });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
     }
 });
+
+app.get('/shops/:shopId/products/:productId', async (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/product.html');
+});
+
+app.get('/shops/:shopId/products/:productId', async (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/product.html');
+});
+
+app.get('/api/shops/:shopId/products/:productId', async (req, res) => {
+    const { shopId } = req.params;
+    const { productId } = req.params;
+
+    try {
+        const shopToProductResult = await PoolNamespace.pool.query('SELECT * FROM shop_to_product WHERE shop_id = $1 AND product_id = $2;', [shopId, productId]);
+        const productData = await ProductNamespace.getInstanceById(productId);
+
+        res.json({ product: productData, shopToProduct: shopToProductResult.rows[0] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 app.get('/products/:productId', async (req, res) => {
     const { productId } = req.params;

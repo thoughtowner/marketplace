@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация о продукте</title>
+</head>
+<body>
+    <div id="productInfo"></div>
+
+    <script>
+        const shopId = window.location.pathname.split('/')[2];
+        const productId = window.location.pathname.split('/')[4];
+
+        fetch(`/api/shops/${shopId}/products/${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                const product = data.product;
+                const shopToProduct = data.shopToProduct;
+
+                if (!product) {
+                    document.getElementById('productInfo').innerHTML = '<p>Информация о продукте не найдена.</p>';
+                } else {
+                    const titleElement = document.createElement('h2');
+                    titleElement.textContent = `Продукт: ${product.title}`;
+
+                    const photoElement = document.createElement('img');
+                    photoElement.src = product.photo;
+                    photoElement.alt = product.title;
+                    photoElement.width = 300;
+                    photoElement.height = 300;
+
+                    const priceElement = document.createElement('p');
+                    priceElement.textContent = `Цена: ${product.price} руб.`;
+
+                    const quantityElement = document.createElement('p');
+                    quantityElement.textContent = `Доступное количество: ${shopToProduct.total_quantity}`;
+
+                    const availableElement = document.createElement('p');
+                    availableElement.textContent = `Доступное к покупке количество: ${shopToProduct.total_quantity - shopToProduct.quantity_in_carts}`;
+
+                    const productDetailsDiv = document.createElement('div');
+                    productDetailsDiv.appendChild(titleElement);
+                    productDetailsDiv.appendChild(photoElement);
+                    productDetailsDiv.appendChild(priceElement);
+                    productDetailsDiv.appendChild(quantityElement);
+                    productDetailsDiv.appendChild(availableElement);
+
+                    document.getElementById('productInfo').innerHTML = '';
+                    document.getElementById('productInfo').appendChild(productDetailsDiv);
+
+                    const backToShopLink = document.getElementById('backToShop');
+                    backToShopLink.href = `/shops/${shopId}`;
+
+                    document.title = `Информация о продукте ${product.title}`;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных о продукте:', error);
+                document.getElementById('productInfo').innerHTML = '<p>Не удалось загрузить информацию о продукте.</p>';
+            });
+    </script>
+
+    <div>
+        <a href="/account" class="btn btn-link">Личный кабинет</a>
+    </div>
+    <div>
+        <a id="backToShop" class="btn btn-link">Вернуться к продуктам магазина</a>
+    </div>
+</body>
+</html>
