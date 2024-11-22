@@ -1,1 +1,1 @@
-shopToProduct
+shopTitle

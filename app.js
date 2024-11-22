@@ -194,7 +194,8 @@ app.get('/api/cart', async (req, res) => {
                 productName: product.title,
                 productPhoto: product.photo,
                 quantity: item.quantity,
-                shopName: shop.title,
+                shopId: shop.id,
+                shopTitle: shop.title,
                 price: product.price,
                 cost: product.price * item.quantity
             };
@@ -401,7 +402,7 @@ app.put('/reduceMoneyFromProducer', async (req, res) => {
 });
 
 
-app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async (req, res) => {
+app.post('/putProductToCart/shops/:shopId/products/:productId', async (req, res) => {
     const { shopId, productId } = req.params;
     const { quantity } = req.body;
 

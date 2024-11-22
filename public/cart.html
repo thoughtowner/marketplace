@@ -13,9 +13,6 @@
     <div>
         <a href="/account" class="btn btn-link">Личный кабинет</a>
     </div>
-    <div>
-        <a href="/shops" class="btn btn-link">Вернуться к магазинам</a>
-    </div>
 
     <script>
         fetch('/api/cart')
@@ -28,8 +25,6 @@
                     return;
                 }
 
-                const titleElement = document.createElement('h2');
-
                 const productCards = data.cart.map(item => 
                     `
                         <div class="product-card">
@@ -37,10 +32,18 @@
                                 <img src="${item.productPhoto}" alt="${item.productName}" width="300" height="300">
                             </a>
                             <p><strong>${item.productName}</strong></p>
-                            <p>Магазин: ${item.shopName}</p>
+                            <p>Магазин: ${item.shopTitle}</p>
                             <p>Количество: ${item.quantity}</p>
                             <p>Цена: ${item.price} руб.</p>
                             <p>Стоимость: ${item.cost} руб.</p>
+
+                            <!-- Форма для уменьшения количества товара -->
+                            <form id="reduceForm-${item.productId}-${item.shopId}" data-product-id="${item.productId}" data-shop-id="${item.shopId}">
+                                <label for="reduceQuantity-${item.productId}">Уменьшить количество:</label>
+                                <input type="number" id="reduceQuantity-${item.productId}" name="quantity" min="1" max="${item.quantity}" value="1" required>
+                                <button type="submit">Уменьшить</button>
+                            </form>
+
                             <br>
                         </div>
                     `
@@ -56,10 +59,39 @@
                 });
 
                 cartInfoDiv.innerHTML = '';
-                cartInfoDiv.appendChild(titleElement);
                 cartInfoDiv.appendChild(productListElement);
 
-                document.title = `Корзина покупок ${data.consumerName}`;
+                data.cart.forEach(item => {
+                    const form = document.getElementById(`reduceForm-${item.productId}-${item.shopId}`);
+                    form.addEventListener('submit', function(event) {
+                        event.preventDefault();
+
+                        const quantity = Number(document.getElementById(`reduceQuantity-${item.productId}`).value);
+
+                        if (isNaN(quantity) || quantity <= 0 || quantity > item.quantity) {
+                            alert('Пожалуйста, введите корректное количество.');
+                            return;
+                        }
+
+                        console.log(item);
+
+                        fetch(`/putOutProductFromCart/shops/${item.shopId}/products/${item.productId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ quantity: quantity })
+                        })
+                        .then(response => response.json())
+                        .then(cartData => {
+                            alert('Товар выложен из корзины!');
+                        })
+                        .catch(error => {
+                            console.error('Ошибка при уменьшении товара:', error);
+                            alert('Не удалось уменьшить количество товара.');
+                        });
+                    });
+                });
             })
             .catch(error => {
                 console.error('Ошибка при загрузке корзины:', error);
