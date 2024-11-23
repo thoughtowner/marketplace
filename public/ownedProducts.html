@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Имеющиеся товары</title>
+</head>
+<body>
+    <h1>Имеющиеся товары</h1>
+
+    <div id="productsContainer"></div>
+
+    <div>
+        <a href="/account" class="btn btn-link">Вернуться в личный кабинет</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/check-role')
+                .then(response => response.json())
+                .then(roleData => {
+                    const userRole = roleData.role;
+                    const shopId = roleData.shopId;
+                    console.log(userRole, shopId);
+
+                    fetch('/api/ownedProducts')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Полученные данные:', data);
+                            const productsContainer = document.getElementById('productsContainer');
+                            if (data.length === 0) {
+                                productsContainer.innerHTML = '<p>У вас нет товаров.</p>';
+                            } else {
+                                productsContainer.innerHTML = data.map(productData => {
+                                    let additionalForm = '';
+
+                                    if (userRole === 'producer') {
+                                        additionalForm = `
+                                            <div style="margin-top: 10px;">
+                                                <h4>Добавить товар в магазин</h4>
+                                                <label for="quantity-${productData.product.id}">Количество:</label>
+                                                <input type="number" id="quantity-${productData.product.id}" min="1" max="100" value="1">
+                                                <button id="addButton-${productData.product.id}" data-product-id="${productData.product.id}" data-shop-id="${shopId}">Добавить</button>
+                                            </div>
+                                        `;
+                                    }
+
+                                    return `
+                                        <div class="product-item" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+                                            <img src="${productData.product.photo}" alt="${productData.product.title}" width="200" height="200">
+                                            <p><strong>Название:</strong> ${productData.product.title}</p>
+                                            <p><strong>Цена:</strong> ${productData.product.price} руб.</p>
+                                            <p><strong>Количество:</strong> ${productData.quantity} штук</p>
+                                            ${additionalForm}
+                                        </div>
+                                    `;
+                                }).join('');
+
+                                data.forEach(productData => {
+                                    const addButton = document.getElementById(`addButton-${productData.product.id}`);
+                                    if (addButton) {
+                                        addButton.addEventListener('click', function() {
+                                            const productId = this.getAttribute('data-product-id');
+                                            const shopId = this.getAttribute('data-shop-id');
+                                            addProductToShop(productId, shopId);
+                                        });
+                                    }
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Ошибка при получении данных о товарах:', error);
+                            document.getElementById('productsContainer').innerHTML = '<p>Не удалось загрузить товары.</p>';
+                        });
+
+                })
+                .catch(error => {
+                    console.error('Ошибка при получении данных о роли:', error);
+                });
+        });
+
+        function addProductToShop(productId, shopId) {
+            console.log("Функция addProductToShop была вызвана");
+            const quantity = parseInt(document.getElementById(`quantity-${productId}`).value, 10);
+            if (isNaN(quantity) || quantity <= 0) {
+                alert('Пожалуйста, введите корректное количество.');
+                return;
+            }
+
+            fetch(`/api/addProductToShop`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Товар добавлен в магазин!');
+                } else {
+                    alert('Не удалось добавить товар в магазин.');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при добавлении товара в магазин:', error);
+                alert('Не удалось добавить товар в магазин.');
+            });
+        }
+    </script>
+</body>
+</html>

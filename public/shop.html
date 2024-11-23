@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Каталог магазина </title>
+    <title>Каталог магазина</title>
 </head>
 <body>
     <div id="shopInfo"></div>
@@ -15,35 +15,29 @@
             .then(response => response.json())
             .then(data => {
                 if (!data.shop || !data.catalog || data.catalog.length === 0) {
-                    document.getElementById('shopInfo').innerHTML = '<p>Информация о магазине не найдена.</p>';
+                    document.getElementById('shopInfo').innerHTML = '<p>Информация о магазине не найдена или магазин пуст.</p>';
                 } else {
                     const titleElement = document.createElement('h2');
                     titleElement.textContent = `Каталог магазина "${data.shop.title}"`;
 
-                    const productNames = data.catalog.map(product => 
-                        `
-                            <a href="/shops/${shopId}/products/${product.id}"><img src=${product.photo} alt="${product.title}" width="300" height="300"></a>
-                            <p>${product.title}</p>
-                            <p>Цена: ${product.price} руб</p>
-                            <p>Общее количество: ${product.totalQuantity} штук</p>
-                            <p>Доступно к покупке: ${product.totalQuantity - product.quantityInCarts} штук</p>
-                            <br>
-                        `
-                    );
-
-                    const productListElement = document.createElement('ul');
-                    productListElement.id = 'productList';
-
-                    productNames.forEach(item => {
-                        const productElement = document.createElement('div');
-                        productElement.innerHTML = item;
-                        productListElement.appendChild(productElement);
-                    });
+                    const productItems = data.catalog.map(product => {
+                        return `
+                            <div class="product-item" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+                                <a href="/shops/${shopId}/products/${product.id}">
+                                    <img src="${product.photo}" alt="${product.title}" style="width: 200px; height: 200px; object-fit: cover; margin-bottom: 10px;">
+                                </a>
+                                <p><strong>Название:</strong> ${product.title}</p>
+                                <p><strong>Цена:</strong> ${product.price} руб.</p>
+                                <p><strong>Общее количество:</strong> ${product.totalQuantity} штук</p>
+                                <p><strong>Доступно к покупке:</strong> ${product.totalQuantity - product.quantityInCarts} штук</p>
+                            </div>
+                        `;
+                    }).join('');
 
                     const shopInfoDiv = document.createElement('div');
                     shopInfoDiv.id = 'shopInfo';
                     shopInfoDiv.appendChild(titleElement);
-                    shopInfoDiv.appendChild(productListElement);
+                    shopInfoDiv.innerHTML += productItems;
 
                     document.getElementById('shopInfo').innerHTML = '';
                     document.getElementById('shopInfo').appendChild(shopInfoDiv);

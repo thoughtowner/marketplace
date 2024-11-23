@@ -16,6 +16,7 @@ import DelayNamespace from './modules/delay.js';
 
 
 const app = express();
+app.use(express.json());
 const port = 8000;
 
 app.use(cors());
@@ -98,7 +99,7 @@ app.post('/register', async (req, res) => {
             const userData = userResult.rows[0];
 
             if (role === 'consumer') {
-                const consumerResult = await PoolNamespace.pool.query(
+                await PoolNamespace.pool.query(
                     'INSERT INTO consumers (user_id, money) VALUES ($1, $2);',
                     [userData.id, 0]
                 );
@@ -108,7 +109,7 @@ app.post('/register', async (req, res) => {
                     [userData.id, 0]
                 );
 
-                const shopResult = await PoolNamespace.pool.query(
+                await PoolNamespace.pool.query(
                     'INSERT INTO shops (producer_id, title) VALUES ($1, $2);',
                     [producerResult.rows[0].id, shopTitle]
                 );
@@ -229,8 +230,11 @@ app.get('/api/cart', async (req, res) => {
 });
 
 
+app.get('/account/ownedProducts', checkAuth, (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/ownedProducts.html');
+});
 
-app.get('/account/ownedProducts', checkAuth, async (req, res) => {
+app.get('/api/ownedProducts', checkAuth, async (req, res) => {
     try {
         const user = req.session.user;
         if (!user) {
@@ -242,51 +246,18 @@ app.get('/account/ownedProducts', checkAuth, async (req, res) => {
         let productInstance;
         for (let i = 0; i < userInstance.ownedProducts.length; i++) {
             productInstance = await ProductNamespace.getInstanceById(userInstance.ownedProducts[i]['productId']);
-            userDataOfProducts.push(
-                {
-                    'product': {
-                        'id': productInstance.id,
-                        'title': productInstance.title,
-                        'price': productInstance.price,
-                        'photo': productInstance.photo
-                    },
-                    'quantity': userInstance.ownedProducts[i]['quantity']
-                }
-            );
+            userDataOfProducts.push({
+                'product': {
+                    'id': productInstance.id,
+                    'title': productInstance.title,
+                    'price': productInstance.price,
+                    'photo': productInstance.photo
+                },
+                'quantity': userInstance.ownedProducts[i]['quantity']
+            });
         }
 
-        const html = `
-            <!DOCTYPE html>
-            <html lang="ru">
-            <head>
-                <meta charset="UTF-8">
-                <title>Имеющиеся товары</title>
-            </head>
-            <body>
-                <h1>Имеющиеся товары</h1>
-
-                <div id="logDiv"></div>
-
-                <div id="productsContainer">
-                    ${Object.keys(userDataOfProducts).map(function(key) {
-                        const productData = userDataOfProducts[key];
-                        return `
-                            <div class="product-item">
-                                <img src="${productData.product.photo}" alt="${productData.product.title}" width="300" height="300">
-                                <p>Название: ${productData.product.title}</p>
-                                <p>Количество: ${productData.quantity} штук</p>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-
-                <div>
-                    <a href="/account">Вернутся в личный кабинет</a>
-                </div>
-            </body>
-        `;
-
-        res.send(html);
+        res.json(userDataOfProducts);
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
@@ -322,7 +293,14 @@ app.get('/api/shops/:shopId', async (req, res) => {
             try {
                 const product = await ProductNamespace.getInstanceById(productData.productId);
                 
-                return { id: product.id, title: product.title, price: product.price, photo: product.photo, totalQuantity: productData.totalQuantity, quantityInCarts: productData.quantityInCarts};
+                return { 
+                    id: product.id,
+                    title: product.title,
+                    price: product.price,
+                    photo: product.photo,
+                    totalQuantity: productData.totalQuantity,
+                    quantityInCarts: productData.quantityInCarts
+                };
             } catch (error) {
                 console.error(`Ошибка при получении товара с id ${productData.productId}:`, error);
                 return { productId: productData.productId, title: `Товар не найден (${productData.productId})`, category: '' };
@@ -481,12 +459,12 @@ app.put('/putOutProductFromCart/shops/:shopId/products/:productId', checkAuth, a
 });
 
 app.post('/buyProducts', checkAuth, async (req, res) => {
-    try {
-        const user = req.session.user;
-        if (!user) {
-            throw new Error('Пользователь не авторизован');
-        }
+    const user = req.session.user;
+    if (!user) {
+        throw new Error('Пользователь не авторизован');
+    }
 
+    try {
         let userInstance = await UserNamespace.getInstanceById(user.id);
 
         await userInstance.buyProducts();
@@ -500,37 +478,49 @@ app.post('/buyProducts', checkAuth, async (req, res) => {
     }
 });
 
-app.post('/addProductToShop/products/:productId/users/:userId', checkAuth, async (req, res) => {
-    const { productId, userId } = req.params;
-    const { quantity } = req.body;
+
+app.post('/api/addProductToShop', checkAuth, async (req, res) => {
+    const { productId, quantity } = req.body;
+
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ error: 'Пользователь не авторизован' });
+    }
 
     try {
-        if (productId && userId && quantity) {
-            const productInstance = await ProductNamespace.getInstanceById(productId);
-            const userInstance = await UserNamespace.getInstanceById(userId);
-
-            await userInstance.addProductToShop(productInstance, quantity);
-            await DelayNamespace.delay(100);
-
-            const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
-            res.status(200).json({ shopCatalog: shopInstance.catalog });
-        } else {
-            res.status(400).json({ 'error': 'Не переданы ID продукта, ID пользователя, количество продукта.' });
+        if (!productId || !quantity) {
+            return res.status(400).json({ error: 'Не переданы ID продукта или количество продукта.' });
         }
+
+        const productInstance = await ProductNamespace.getInstanceById(productId);
+        const userInstance = await UserNamespace.getInstanceById(user.id);
+
+        // Добавляем товар в магазин
+        await userInstance.addProductToShop(productInstance, quantity);
+        await DelayNamespace.delay(100);
+
+        const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+        res.status(200).json({ success: true, shopCatalog: shopInstance.catalog });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ 'error': error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-app.put('/reduceProductFromShop/products/:productId/users/:userId', checkAuth, async (req, res) => {
-    const { productId, userId } = req.params;
+
+app.put('/reduceProductFromShop/products/:productId', checkAuth, async (req, res) => {
+    const { productId } = req.params;
     const { quantity } = req.body;
 
+    const user = req.session.user;
+    if (!user) {
+        throw new Error('Пользователь не авторизован');
+    }
+
     try {
-        if (productId && userId && quantity) {
+        if (productId && quantity) {
             const productInstance = await ProductNamespace.getInstanceById(productId);
-            const userInstance = await UserNamespace.getInstanceById(userId);
+            const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.reduceProductFromShop(productInstance, quantity);
             await DelayNamespace.delay(100);
@@ -538,7 +528,7 @@ app.put('/reduceProductFromShop/products/:productId/users/:userId', checkAuth, a
             const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
             res.status(200).json({ shopCatalog: shopInstance.catalog });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID продукта, ID пользователя, количество продукта.' });
+            res.status(400).json({ 'error': 'Не переданы ID продукта, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -546,13 +536,18 @@ app.put('/reduceProductFromShop/products/:productId/users/:userId', checkAuth, a
     }
 });
 
-app.delete('/deleteProductFromShop/products/:productId/users/:userId', checkAuth, async (req, res) => {
-    const { productId, userId } = req.params;
+app.delete('/deleteProductFromShop/products/:productId', checkAuth, async (req, res) => {
+    const { productId } = req.params;
+
+    const user = req.session.user;
+    if (!user) {
+        throw new Error('Пользователь не авторизован');
+    }
 
     try {
-        if (productId && userId) {
+        if (productId) {
             const productInstance = await ProductNamespace.getInstanceById(productId);
-            const userInstance = await UserNamespace.getInstanceById(userId);
+            const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.deleteProductFromShop(productInstance);
             await DelayNamespace.delay(100);
@@ -560,7 +555,7 @@ app.delete('/deleteProductFromShop/products/:productId/users/:userId', checkAuth
             const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
             res.status(200).json({ shopCatalog: shopInstance.catalog });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID продукта, ID пользователя.' });
+            res.status(400).json({ 'error': 'Не передан ID продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -568,13 +563,17 @@ app.delete('/deleteProductFromShop/products/:productId/users/:userId', checkAuth
     }
 });
 
-app.post('/addNewProductToOwned/users/:userId', checkAuth, async (req, res) => {
-    const { userId } = req.params;
+app.post('/addNewProductToOwned', checkAuth, async (req, res) => {
     const { title, price, quantity } = req.body;
 
+    const user = req.session.user;
+    if (!user) {
+        throw new Error('Пользователь не авторизован');
+    }
+
     try {
-        if (userId && quantity) {
-            let userInstance = await UserNamespace.getInstanceById(userId);
+        if (title && price && quantity) {
+            let userInstance = await UserNamespace.getInstanceById(user.id);
 
             const insertResult = await PoolNamespace.pool.query(
                 `
@@ -589,10 +588,10 @@ app.post('/addNewProductToOwned/users/:userId', checkAuth, async (req, res) => {
             await userInstance.addOwnedProductToOwned(insertResult.rows[0], quantity);
             await DelayNamespace.delay(100);
 
-            userInstance = await UserNamespace.getInstanceById(userId);
+            userInstance = await UserNamespace.getInstanceById(user.id);
             res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID пользователя, название продукта, цена продукта, количество продукта.' });
+            res.status(400).json({ 'error': 'Не переданы название продукта, цена продукта, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
@@ -600,22 +599,27 @@ app.post('/addNewProductToOwned/users/:userId', checkAuth, async (req, res) => {
     }
 });
 
-app.post('/addOwnedProductToOwned/products/:productId/users/:userId', checkAuth, async (req, res) => {
-    const { productId, userId } = req.params;
+app.post('/addOwnedProductToOwned/products/:productId', checkAuth, async (req, res) => {
+    const { productId } = req.params;
     const { quantity } = req.body;
 
+    const user = req.session.user;
+    if (!user) {
+        throw new Error('Пользователь не авторизован');
+    }
+
     try {
-        if (productId && userId && quantity) {
+        if (productId && quantity) {
             const productInstance = await ProductNamespace.getInstanceById(productId);
-            let userInstance = await UserNamespace.getInstanceById(userId);
+            let userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.addOwnedProductToOwned(productInstance, quantity);
             await DelayNamespace.delay(100);
 
-            userInstance = await UserNamespace.getInstanceById(userId);
+            userInstance = await UserNamespace.getInstanceById(user.id);
             res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID продукта, ID пользователя, количество продукта.' });
+            res.status(400).json({ 'error': 'Не переданы ID продукта, количество продукта.' });
         }
     } catch (error) {
         console.error(error);
