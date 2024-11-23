@@ -41,6 +41,9 @@ app.get('/check-auth', (req, res) => {
 });
 
 app.get('/check-role', async (req, res) => {
+    if (!req.session.user) {
+        return res.json({ role: '' });
+    }
     if (req.session.user.role === 'consumer') {
         res.json({ role: 'consumer' });
     } else if (req.session.user.role === 'producer') {
@@ -157,7 +160,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.get('/logout', (req, res) => {
+app.get('/logout', checkAuth, (req, res) => {
     req.session.destroy();
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/logout.html');
 });
@@ -167,7 +170,7 @@ app.get('/', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/index.html');
 });
 
-app.get('/account', (req, res) => {
+app.get('/account', checkAuth, (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/account.html');
 });
 
@@ -188,7 +191,7 @@ app.get('/api/getMyShopId', async (req, res) => {
     }
 });
 
-app.get('/account/cart', (req, res) => {
+app.get('/account/cart', checkAuth, (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/cart.html');
 });
 
@@ -227,7 +230,7 @@ app.get('/api/cart', async (req, res) => {
 
 
 
-app.get('/account/ownedProducts', async (req, res) => {
+app.get('/account/ownedProducts', checkAuth, async (req, res) => {
     try {
         const user = req.session.user;
         if (!user) {
@@ -357,11 +360,11 @@ app.get('/api/shops/:shopId/products/:productId', async (req, res) => {
 
 
 
-app.get('/account/addMoneyToConsumer', async (req, res) => {
+app.get('/account/addMoneyToConsumer', checkAuth, async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/addMoneyToConsumer.html');
 });
 
-app.put('/addMoneyToConsumer', async (req, res) => {
+app.put('/addMoneyToConsumer', checkAuth, async (req, res) => {
     const { money } = req.body;
 
     try {
@@ -388,11 +391,11 @@ app.put('/addMoneyToConsumer', async (req, res) => {
 });
 
 
-app.get('/account/reduceMoneyFromProducer', async (req, res) => {
+app.get('/account/reduceMoneyFromProducer', checkAuth, async (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/reduceMoneyFromProducer.html');
 });
 
-app.put('/reduceMoneyFromProducer', async (req, res) => {
+app.put('/reduceMoneyFromProducer', checkAuth, async (req, res) => {
     const { money } = req.body;
 
     try {
@@ -419,7 +422,7 @@ app.put('/reduceMoneyFromProducer', async (req, res) => {
 });
 
 
-app.post('/putProductToCart/shops/:shopId/products/:productId', async (req, res) => {
+app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async (req, res) => {
     const { shopId, productId } = req.params;
     const { quantity } = req.body;
 

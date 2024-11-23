@@ -24,7 +24,7 @@
         <div>
             <a href="/shops" class="btn btn-link">Мой магазин</a>
         </div>
-    </div>
+    </div>    
 
     <div>
         <a href="/account/ownedProducts" class="btn btn-link">Имеющиеся продукты</a>
@@ -51,9 +51,11 @@
                         fetch(`/api/getMyShopId`)
                             .then(response => response.json())
                             .then(shopData => {
-                                const shopLink = document.querySelector('#producer-content a[href="/shops/"]');
-                                if (shopLink && shopData.shopId) {
+                                const shopLink = document.querySelector('#producer-content a[href^="/shops"]');
+                                if (shopLink) {
                                     shopLink.href = `/shops/${shopData.shopId}`;
+                                } else {
+                                    console.error('Ссылка на магазин не найдена.');
                                 }
                             })
                             .catch(error => console.error('Ошибка при получении shopId:', error));
