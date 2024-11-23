@@ -35,10 +35,10 @@
                                     if (userRole === 'producer') {
                                         additionalForm = `
                                             <div style="margin-top: 10px;">
-                                                <h4>Добавить товар в магазин</h4>
+                                                <h4>Добавить товар к имеющимся товарам</h4>
                                                 <label for="quantity-${productData.product.id}">Количество:</label>
                                                 <input type="number" id="quantity-${productData.product.id}" min="1" max="100" value="1">
-                                                <button id="addButton-${productData.product.id}" data-product-id="${productData.product.id}" data-shop-id="${shopId}">Добавить</button>
+                                                <button id="addButton-${productData.product.id}" data-product-id="${productData.product.id}">Добавить к имеющимся товарам</button>
                                             </div>
                                         `;
                                     }
@@ -59,8 +59,7 @@
                                     if (addButton) {
                                         addButton.addEventListener('click', function() {
                                             const productId = this.getAttribute('data-product-id');
-                                            const shopId = this.getAttribute('data-shop-id');
-                                            addProductToShop(productId, shopId);
+                                            addOwnedProductToOwned(productId);
                                         });
                                     }
                                 });
@@ -77,15 +76,14 @@
                 });
         });
 
-        function addProductToShop(productId, shopId) {
-            console.log("Функция addProductToShop была вызвана");
+        function addOwnedProductToOwned(productId) {
             const quantity = parseInt(document.getElementById(`quantity-${productId}`).value, 10);
             if (isNaN(quantity) || quantity <= 0) {
                 alert('Пожалуйста, введите корректное количество.');
                 return;
             }
 
-            fetch(`/api/addProductToShop`, {
+            fetch(`/api/addOwnedProductToOwned`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -98,14 +96,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Товар добавлен в магазин!');
+                    alert('Товар добавлен к имеющимся товарам!');
                 } else {
-                    alert('Не удалось добавить товар в магазин.');
+                    alert('Не удалось добавить товар к имеющимся товарам.');
                 }
             })
             .catch(error => {
-                console.error('Ошибка при добавлении товара в магазин:', error);
-                alert('Не удалось добавить товар в магазин.');
+                console.error('Ошибка при добавлении товара к имеющимся товарам:', error);
+                alert('Не удалось добавить товар к имеющимся товарам.');
             });
         }
     </script>

@@ -617,9 +617,8 @@ app.post('/addNewProductToOwned', checkAuth, async (req, res) => {
     }
 });
 
-app.post('/addOwnedProductToOwned/products/:productId', checkAuth, async (req, res) => {
-    const { productId } = req.params;
-    const { quantity } = req.body;
+app.post('/api/addOwnedProductToOwned', checkAuth, async (req, res) => {
+    const { productId, quantity } = req.body;
 
     const user = req.session.user;
     if (!user) {
@@ -635,7 +634,7 @@ app.post('/addOwnedProductToOwned/products/:productId', checkAuth, async (req, r
             await DelayNamespace.delay(100);
 
             userInstance = await UserNamespace.getInstanceById(user.id);
-            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
+            res.status(200).json({ success: true, userOwnedProducts: userInstance.ownedProducts });
         } else {
             res.status(400).json({ 'error': 'Не переданы ID продукта, количество продукта.' });
         }
