@@ -534,8 +534,8 @@ app.post('/api/reduceProductFromShop', checkAuth, async (req, res) => {
     }
 });
 
-app.delete('/deleteProductFromShop/products/:productId', checkAuth, async (req, res) => {
-    const { productId } = req.params;
+app.post('/api/deleteProductFromShop', checkAuth, async (req, res) => {
+    const { productId } = req.body;
 
     const user = req.session.user;
     if (!user) {

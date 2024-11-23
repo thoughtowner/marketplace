@@ -113,7 +113,7 @@ const ProducerNamespace = {
                 if (shop.catalog[i]['productId'] === product.id) {
                     isProductExists = true;
                     if (shop.catalog[i]['totalQuantity'] === 0) {
-                        await shop.deleteProductFromCatalogInDB(i);
+                        shop.catalog.splice(i, 1);
                         console.log(`Пользователь "${user.name}" удалил из магазина "${shop.title}" товар "${product.title}".`);
                         break;
                     } else {

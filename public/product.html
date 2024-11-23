@@ -29,6 +29,11 @@
         <button id="reduceFromShopButton">Убавить из магазина</button>
     </div>
 
+    <div id="deleteFromShopForm" style="display: none; border: 1px solid #ccc; padding: 10px; margin-top: 10px;">
+        <h3>Удалить товар из магазина</h3>
+        <button id="deleteFromShopButton">Удалить из магазина</button>
+    </div>    
+
     <div>
         <a href="/account" class="btn btn-link">Личный кабинет</a>
     </div>
@@ -40,13 +45,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             const shopId = window.location.pathname.split('/')[2];
             const productId = window.location.pathname.split('/')[4];
-
+    
             fetch(`/api/shops/${shopId}/products/${productId}`)
                 .then(response => response.json())
                 .then(data => {
                     const product = data.product;
                     const shopToProduct = data.shopToProduct;
-
+    
                     if (!product) {
                         document.getElementById('productInfo').innerHTML = '<p>Информация о продукте не найдена.</p>';
                     } else {
@@ -60,10 +65,10 @@
                             </div>
                         `;
                         document.getElementById('productInfo').innerHTML = productDetailsHTML;
-
+    
                         const backToShopLink = document.getElementById('backToShop');
                         backToShopLink.href = `/shops/${shopId}`;
-
+    
                         document.title = `Информация о продукте ${product.title}`;
                     }
                 })
@@ -71,20 +76,20 @@
                     console.error('Ошибка при получении данных о продукте:', error);
                     document.getElementById('productInfo').innerHTML = '<p>Не удалось загрузить информацию о продукте.</p>';
                 });
-
+    
             fetch('/check-role')
                 .then(response => response.json())
                 .then(data => {
                     if (data.role === 'consumer') {
                         document.getElementById('addToCartForm').style.display = '';
-
+    
                         document.getElementById('addToCartButton').addEventListener('click', function() {
                             const quantity = parseInt(document.getElementById('quantity').value, 10);
                             if (isNaN(quantity) || quantity <= 0) {
                                 alert('Пожалуйста, введите корректное количество.');
                                 return;
                             }
-
+    
                             fetch(`/putProductToCart/shops/${shopId}/products/${productId}`, {
                                 method: 'POST',
                                 headers: {
@@ -104,14 +109,15 @@
                     } else if (data.role === 'producer') {
                         document.getElementById('addToShopForm').style.display = '';
                         document.getElementById('reduceFromShopForm').style.display = '';
-
+                        document.getElementById('deleteFromShopForm').style.display = '';
+    
                         document.getElementById('addToShopButton').addEventListener('click', function() {
                             const quantityToAdd = parseInt(document.getElementById('quantityToAdd').value, 10);
                             if (isNaN(quantityToAdd) || quantityToAdd <= 0) {
                                 alert('Пожалуйста, введите корректное количество.');
                                 return;
                             }
-
+    
                             fetch(`/api/addProductToShop`, {
                                 method: 'POST',
                                 headers: {
@@ -135,14 +141,14 @@
                                 alert('Не удалось добавить товар в магазин.');
                             });
                         });
-
+    
                         document.getElementById('reduceFromShopButton').addEventListener('click', function() {
                             const quantityToReduce = parseInt(document.getElementById('quantityToReduce').value, 10);
                             if (isNaN(quantityToReduce) || quantityToReduce <= 0) {
                                 alert('Пожалуйста, введите корректное количество.');
                                 return;
                             }
-
+    
                             fetch(`/api/reduceProductFromShop`, {
                                 method: 'POST',
                                 headers: {
@@ -166,16 +172,42 @@
                                 alert('Не удалось убавить товар из магазина.');
                             });
                         });
+    
+                        document.getElementById('deleteFromShopButton').addEventListener('click', function() {
+                            fetch(`/api/deleteProductFromShop`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    productId: productId
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.shopCatalog) {
+                                    alert('Товар удалён из магазина!');
+                                    window.location.href = `http://localhost:8000/shops/${shopId}`;
+                                } else {
+                                    alert('Не удалось удалить товар из магазина.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при удалении товара из магазина:', error);
+                                alert('Не удалось удалить товар из магазина.');
+                            });
+                        });
                     } else {
                         document.getElementById('addToCartForm').style.display = 'none';
                         document.getElementById('addToShopForm').style.display = 'none';
                         document.getElementById('reduceFromShopForm').style.display = 'none';
+                        document.getElementById('deleteFromShopForm').style.display = 'none';
                     }
                 })
                 .catch(error => {
                     console.error('Ошибка при получении данных о роли:', error);
                 });
         });
-    </script>
+    </script>    
 </body>
 </html>
