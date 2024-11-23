@@ -117,8 +117,9 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            await producer.addProductToShop(this.name, shop, product, quantity);
+            await producer.addProductToShop(this, shop, product, quantity);
             shop.updateCatalogInDB();
+            this.updateOwnedProductsInDB();
         }
 
         async reduceProductFromShop(product, quantity) {
@@ -126,15 +127,16 @@ const UserNamespace = {
             checkQuantityValue(quantity);
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            await producer.reduceProductFromShop(this.name, shop, product, quantity);
+            await producer.reduceProductFromShop(this, shop, product, quantity);
             shop.updateCatalogInDB();
+            this.updateOwnedProductsInDB();
         }
 
         async deleteProductFromShop(product) {
             this.checkRoleAffiliation('producer');
             let producer = await ProducerNamespace.getInstanceById(this.producerId);
             let shop = await ShopNamespace.getInstanceById(producer.shopId);
-            await producer.deleteProductFromShop(this.name, shop, product);
+            await producer.deleteProductFromShop(this, shop, product);
             shop.deleteProductFromCatalogInDB(product);
         }
 

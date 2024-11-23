@@ -507,9 +507,8 @@ app.post('/api/addProductToShop', checkAuth, async (req, res) => {
 });
 
 
-app.put('/reduceProductFromShop/products/:productId', checkAuth, async (req, res) => {
-    const { productId } = req.params;
-    const { quantity } = req.body;
+app.post('/api/reduceProductFromShop', checkAuth, async (req, res) => {
+    const { productId, quantity } = req.body;
 
     const user = req.session.user;
     if (!user) {

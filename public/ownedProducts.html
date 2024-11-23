@@ -21,12 +21,10 @@
                 .then(roleData => {
                     const userRole = roleData.role;
                     const shopId = roleData.shopId;
-                    console.log(userRole, shopId);
 
                     fetch('/api/ownedProducts')
                         .then(response => response.json())
                         .then(data => {
-                            console.log('Полученные данные:', data);
                             const productsContainer = document.getElementById('productsContainer');
                             if (data.length === 0) {
                                 productsContainer.innerHTML = '<p>У вас нет товаров.</p>';
