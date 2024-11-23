@@ -22,12 +22,15 @@
             <a href="/account/reduceMoneyFromProducer" class="btn btn-link">Снять деньги со счёта для продаж</a>
         </div>
         <div>
-            <a href="/shops/" class="btn btn-link">Мой магазин</a>
+            <a href="/shops" class="btn btn-link">Мой магазин</a>
         </div>
     </div>
 
     <div>
         <a href="/account/ownedProducts" class="btn btn-link">Имеющиеся продукты</a>
+    </div>
+    <div>
+        <a href="/" class="btn btn-link">Вернуться на главную страницу</a>
     </div>
     <div>
         <a href="/logout" class="btn btn-link">Выйти из системы</a>
@@ -44,7 +47,16 @@
                     } else if (data.role === 'producer') {
                         document.getElementById('consumer-content').style.display = 'none';
                         document.getElementById('producer-content').style.display = '';
-                        document.querySelector('#producer-content a[href="/shops/"]').href = `/shops/${data.shopId}`;
+
+                        fetch(`/api/getMyShopId`)
+                            .then(response => response.json())
+                            .then(shopData => {
+                                const shopLink = document.querySelector('#producer-content a[href="/shops/"]');
+                                if (shopLink && shopData.shopId) {
+                                    shopLink.href = `/shops/${shopData.shopId}`;
+                                }
+                            })
+                            .catch(error => console.error('Ошибка при получении shopId:', error));
                     }
                 })
         });

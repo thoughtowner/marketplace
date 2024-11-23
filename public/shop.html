@@ -24,6 +24,7 @@
                         `
                             <a href="/shops/${shopId}/products/${product.id}"><img src=${product.photo} alt="${product.title}" width="300" height="300"></a>
                             <p>${product.title}</p>
+                            <p>Цена: ${product.price} руб</p>
                             <p>Общее количество: ${product.totalQuantity} штук</p>
                             <p>Доступно к покупке: ${product.totalQuantity - product.quantityInCarts} штук</p>
                             <br>

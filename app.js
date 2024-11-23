@@ -171,6 +171,23 @@ app.get('/account', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/account.html');
 });
 
+app.get('/api/getMyShopId', async (req, res) => {
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ error: 'Пользователь не авторизован' });
+    }
+
+    try {
+        const userInstance = await UserNamespace.getInstanceById(user.id);
+        const producerInstance = await ProducerNamespace.getInstanceById(userInstance.producerId);
+        const shop = await ShopNamespace.getShopByProducerId(producerInstance.id);
+        res.json({ shopId: shop.id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/account/cart', (req, res) => {
     res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/cart.html');
 });
@@ -203,7 +220,7 @@ app.get('/api/cart', async (req, res) => {
 
         res.json({ cart: cartDetails });
     } catch (error) {
-        console.error('Ошибка при получении корзины:', error);
+        console.error(error);
         res.status(500).json({ error: 'Не удалось получить корзину.' });
     }
 });
@@ -302,7 +319,7 @@ app.get('/api/shops/:shopId', async (req, res) => {
             try {
                 const product = await ProductNamespace.getInstanceById(productData.productId);
                 
-                return { id: product.id, title: product.title, photo: product.photo, totalQuantity: productData.totalQuantity, quantityInCarts: productData.quantityInCarts};
+                return { id: product.id, title: product.title, price: product.price, photo: product.photo, totalQuantity: productData.totalQuantity, quantityInCarts: productData.quantityInCarts};
             } catch (error) {
                 console.error(`Ошибка при получении товара с id ${productData.productId}:`, error);
                 return { productId: productData.productId, title: `Товар не найден (${productData.productId})`, category: '' };
@@ -460,21 +477,20 @@ app.put('/putOutProductFromCart/shops/:shopId/products/:productId', checkAuth, a
     }
 });
 
-app.post('/buyProducts/users/:userId', checkAuth, async (req, res) => {
-    const { userId } = req.params;
-
+app.post('/buyProducts', checkAuth, async (req, res) => {
     try {
-        if (userId) {
-            let userInstance = await UserNamespace.getInstanceById(userId);
-
-            await userInstance.buyProducts();
-            await DelayNamespace.delay(100);
-
-            userInstance = await UserNamespace.getInstanceById(userId);
-            res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
-        } else {
-            res.status(400).json({ 'error': 'Неверно указан ID пользователя.' });
+        const user = req.session.user;
+        if (!user) {
+            throw new Error('Пользователь не авторизован');
         }
+
+        let userInstance = await UserNamespace.getInstanceById(user.id);
+
+        await userInstance.buyProducts();
+        await DelayNamespace.delay(100);
+
+        userInstance = await UserNamespace.getInstanceById(user.id);
+        res.status(200).json({ userOwnedProducts: userInstance.ownedProducts });
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });

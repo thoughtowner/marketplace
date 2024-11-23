@@ -286,7 +286,7 @@ const UserNamespace = {
         const consumerData = consumerResult.rows[0];
 
         const userResult = await PoolNamespace.pool.query(
-            'SELECT * FROM consumers WHERE id = $1',
+            'SELECT * FROM users WHERE id = $1',
             [consumerData.user_id]
         );
 

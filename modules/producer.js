@@ -170,7 +170,7 @@ const ProducerNamespace = {
             [shopId]
         );
 
-        if (shopId.rows.length === 0) {
+        if (shopResult.rows.length === 0) {
             throw new Error(`В таблице shops нет записей с id "${shopId}"`);
         }
 

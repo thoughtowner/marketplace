@@ -11,6 +11,10 @@
     <div id="cartInfo"></div>
 
     <div>
+        <button id="buyButton">Купить товары</button>
+    </div>
+
+    <div>
         <a href="/account" class="btn btn-link">Личный кабинет</a>
     </div>
 
@@ -92,12 +96,32 @@
                         });
                     });
                 });
+
+                const buyButton = document.getElementById('buyButton');
+                buyButton.addEventListener('click', function() {
+                    fetch(`/buyProducts`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.userOwnedProducts) {
+                            alert('Товары успешно куплены!');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при покупке товаров:', error);
+                        alert('Не удалось купить товары.');
+                    });
+                });
+
             })
             .catch(error => {
                 console.error('Ошибка при загрузке корзины:', error);
                 document.getElementById('cartInfo').innerHTML = '<p>Не удалось загрузить корзину.</p>';
             });
     </script>
-
 </body>
 </html>

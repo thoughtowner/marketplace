@@ -111,6 +111,53 @@ const ShopNamespace = {
     
         let shopInstance = new this.Shop(result.id, result.title, result.catalog);
         return shopInstance;
+    },
+
+    async getShopByProducerId(producerId) {
+        const baseResult = await PoolNamespace.pool.query(
+            'SELECT * FROM shops WHERE producer_id = $1',
+            [producerId]
+        );
+
+        if (baseResult.rows.length === 0) {
+            throw new Error(`В таблице shops нет записей с id "${baseResult.rows[0].id}"`);
+        }
+
+        const catalogResults = await PoolNamespace.pool.query(
+            `
+                SELECT 
+                    s.id AS shop_id,
+                    sp.product_id,
+                    sp.total_quantity,
+                    sp.quantity_in_carts
+                FROM 
+                    shops s
+                LEFT JOIN 
+                    shop_to_product sp ON s.id = sp.shop_id
+                WHERE 
+                    s.id = $1
+            `,
+            [baseResult.rows[0].id]
+        );
+
+        let catalog = [];
+        catalogResults.rows.forEach(row => {
+            if (row.product_id !== null && row.total_quantity !== null && row.quantity_in_carts !== null) {
+                catalog.push({
+                    productId: row.product_id,
+                    totalQuantity: row.total_quantity,
+                    quantityInCarts: row.quantity_in_carts
+                });
+            }
+        });
+
+        const result = {
+            ...baseResult.rows[0],
+            catalog: Object.values(catalog)
+        };
+    
+        let shopInstance = new this.Shop(result.id, result.title, result.catalog);
+        return shopInstance;
     }
 }
 
