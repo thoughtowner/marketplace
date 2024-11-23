@@ -479,6 +479,26 @@ app.post('/buyProducts', checkAuth, async (req, res) => {
 });
 
 
+app.get('/api/getProducerShop', checkAuth, async (req, res) => {
+    try {
+        const user = req.session.user;
+        if (user) {
+            const producerResult = await PoolNamespace.pool.query(
+                'SELECT * FROM producers WHERE user_id = $1',
+                [user.id]
+            );
+            const shopInstance = await ShopNamespace.getShopByProducerId(producerResult.rows[0].id);
+            const shopId = shopInstance.id;
+
+            res.status(200).json({ shopId: shopId });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+
 app.post('/api/addProductToShop', checkAuth, async (req, res) => {
     const { productId, quantity } = req.body;
 

@@ -59,35 +59,6 @@ const ShopNamespace = {
                 );
             }
         }
-
-        // async deleteProductFromCatalogInDB(i) {
-        //     let deleteResult;
-        //     let insertResult;
-            
-        //     for (let i = 0; i < this.catalog.length; i++) {
-        //         deleteResult = await PoolNamespace.pool.query(
-        //             `
-        //                 DELETE FROM shop_to_product
-        //                 WHERE
-        //                     shop_id = $1 AND
-        //                     product_id = $2
-        //             `,
-        //             [this.id, this.catalog[i]['productId']]
-        //         );
-        //     }
-
-        //     this.catalog.splice(i, 1);
-
-        //     for (let i = 0; i < this.catalog.length; i++) {
-        //         insertResult = await PoolNamespace.pool.query(
-        //             `
-        //                 INSERT INTO shop_to_product (shop_id, product_id, total_quantity, quantity_in_carts)
-        //                 VALUES ($1, $2, $3, $4);
-        //             `,
-        //             [this.id, this.catalog[i]['productId'], this.catalog[i]['totalQuantity'], this.catalog[i]['quantityInCarts']]
-        //         );
-        //     }
-        // }
     },
 
     async getInstanceById(shopId) {
