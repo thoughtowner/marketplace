@@ -15,6 +15,13 @@
         <button id="addToCartButton">Добавить в корзину</button>
     </div>
 
+    <div id="addToShopForm" style="display: none; border: 1px solid #ccc; padding: 10px; margin-top: 10px;">
+        <h3>Добавить товар в магазин</h3>
+        <label for="quantityToAdd">Количество:</label>
+        <input type="number" id="quantityToAdd" min="1" max="100" value="1">
+        <button id="addToShopButton">Добавить в магазин</button>
+    </div>
+
     <div>
         <a href="/account" class="btn btn-link">Личный кабинет</a>
     </div>
@@ -45,7 +52,6 @@
                                 <p><strong>Доступно к покупке:</strong> ${shopToProduct.total_quantity - shopToProduct.quantity_in_carts} штук</p>
                             </div>
                         `;
-
                         document.getElementById('productInfo').innerHTML = productDetailsHTML;
 
                         const backToShopLink = document.getElementById('backToShop');
@@ -88,9 +94,46 @@
                                 alert('Не удалось добавить товар в корзину.');
                             });
                         });
+                    } else if (data.role === 'producer') {
+                        document.getElementById('addToShopForm').style.display = '';
+
+                        document.getElementById('addToShopButton').addEventListener('click', function() {
+                            const quantityToAdd = parseInt(document.getElementById('quantityToAdd').value, 10);
+                            if (isNaN(quantityToAdd) || quantityToAdd <= 0) {
+                                alert('Пожалуйста, введите корректное количество.');
+                                return;
+                            }
+
+                            fetch(`/api/addProductToShop`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    productId: productId,
+                                    quantity: quantityToAdd
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('Товар добавлен в магазин!');
+                                } else {
+                                    alert('Не удалось добавить товар в магазин.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при добавлении товара в магазин:', error);
+                                alert('Не удалось добавить товар в магазин.');
+                            });
+                        });
                     } else {
                         document.getElementById('addToCartForm').style.display = 'none';
+                        document.getElementById('addToShopForm').style.display = 'none';
                     }
+                })
+                .catch(error => {
+                    console.error('Ошибка при получении данных о роли:', error);
                 });
         });
     </script>

@@ -495,7 +495,6 @@ app.post('/api/addProductToShop', checkAuth, async (req, res) => {
         const productInstance = await ProductNamespace.getInstanceById(productId);
         const userInstance = await UserNamespace.getInstanceById(user.id);
 
-        // Добавляем товар в магазин
         await userInstance.addProductToShop(productInstance, quantity);
         await DelayNamespace.delay(100);
 
