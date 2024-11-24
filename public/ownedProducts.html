@@ -8,6 +8,8 @@
 <body>
     <h1>Имеющиеся товары</h1>
 
+    <div id="addNewProductFormContainer"></div>
+
     <div id="productsContainer"></div>
 
     <div>
@@ -20,7 +22,58 @@
                 .then(response => response.json())
                 .then(roleData => {
                     const userRole = roleData.role;
-                    const shopId = roleData.shopId;
+
+                    if (userRole === 'producer') {
+                        const addNewProductFormContainer = document.getElementById('addNewProductFormContainer');
+                        addNewProductFormContainer.innerHTML = `
+                            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 20px;">
+                                <h3>Добавить новый товар</h3>
+                                <label for="newProductTitle">Название товара:</label>
+                                <input type="text" id="newProductTitle" required><br><br>
+                                <label for="newProductPrice">Цена товара (руб):</label>
+                                <input type="number" id="newProductPrice" required min="0"><br><br>
+                                <label for="newProductPhoto">Ссылка на фото:</label>
+                                <input type="text" id="newProductPhoto" required><br><br>
+                                <label for="newProductQuantity">Количество товара:</label>
+                                <input type="number" id="newProductQuantity" required min="1"><br><br>
+                                <button id="addNewProductButton">Добавить товар</button>
+                            </div>
+                        `;
+
+                        const addNewProductButton = document.getElementById('addNewProductButton');
+                        addNewProductButton.addEventListener('click', function() {
+                            const title = document.getElementById('newProductTitle').value;
+                            const price = parseInt(document.getElementById('newProductPrice').value, 10);
+                            const photo = document.getElementById('newProductPhoto').value;
+                            const quantity = parseInt(document.getElementById('newProductQuantity').value, 10);
+
+                            if (!title || !price || !photo || !quantity) {
+                                alert('Пожалуйста, заполните все поля.');
+                                return;
+                            }
+
+                            fetch('/api/addNewProductToOwned', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ title, price, photo, quantity })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.userOwnedProducts) {
+                                    alert('Товар добавлен!');
+                                    location.reload();
+                                } else {
+                                    alert('Не удалось добавить товар.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при добавлении товара:', error);
+                                alert('Ошибка при добавлении товара.');
+                            });
+                        });
+                    }
 
                     fetch('/api/ownedProducts')
                         .then(response => response.json())
@@ -34,7 +87,7 @@
 
                                     if (userRole === 'producer') {
                                         additionalForm = `
-                                            <div style="margin-top: 10px;">
+                                            <div style="border: 1px solid #ccc; padding: 10px; margin-top: 10px;">
                                                 <h4>Добавить товар к имеющимся товарам</h4>
                                                 <label for="quantity-${productData.product.id}">Количество:</label>
                                                 <input type="number" id="quantity-${productData.product.id}" min="1" max="100" value="1">

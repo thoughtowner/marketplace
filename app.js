@@ -581,8 +581,8 @@ app.post('/api/deleteProductFromShop', checkAuth, async (req, res) => {
     }
 });
 
-app.post('/addNewProductToOwned', checkAuth, async (req, res) => {
-    const { title, price, quantity } = req.body;
+app.post('/api/addNewProductToOwned', checkAuth, async (req, res) => {
+    const { title, price, photo, quantity } = req.body;
 
     const user = req.session.user;
     if (!user) {
@@ -590,20 +590,29 @@ app.post('/addNewProductToOwned', checkAuth, async (req, res) => {
     }
 
     try {
-        if (title && price && quantity) {
+        if (title && price && photo && quantity) {
             let userInstance = await UserNamespace.getInstanceById(user.id);
+
+            const selectResult = await PoolNamespace.pool.query(`
+                SELECT * FROM products p JOIN user_to_product up ON p.id = up.product_id WHERE title = $1 AND price = $2 AND photo = $3 AND up.user_id = $4`
+                , [title, price, photo, user.id]
+            );
+            if (selectResult.rows.length !== 0) {
+                throw new Error('Товар уже содержится среди имеющихся товаров');
+            }
 
             const insertResult = await PoolNamespace.pool.query(
                 `
-                    INSERT INTO products (title, price)
-                    VALUES ($1, $2)
+                    INSERT INTO products (title, price, photo)
+                    VALUES ($1, $2, $3)
                     RETURNING *;
                 `,
-                [title, price]
+                [title, price, photo]
             );
             await DelayNamespace.delay(100);
 
-            await userInstance.addOwnedProductToOwned(insertResult.rows[0], quantity);
+            const productInstance = await ProductNamespace.getInstanceById(insertResult.rows[0].id);
+            await userInstance.addOwnedProductToOwned(productInstance, quantity);
             await DelayNamespace.delay(100);
 
             userInstance = await UserNamespace.getInstanceById(user.id);
