@@ -346,12 +346,9 @@ app.put('/addMoneyToConsumer', checkAuth, async (req, res) => {
     const { money } = req.body;
 
     try {
-        const user = req.session.user;
-        if (!user) {
-            throw new Error('Пользователь не авторизован');
-        }
-
         if (money) {
+            const user = req.session.user;
+            
             const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.addMoneyToConsumer(money);
@@ -377,12 +374,9 @@ app.put('/reduceMoneyFromProducer', checkAuth, async (req, res) => {
     const { money } = req.body;
 
     try {
-        const user = req.session.user;
-        if (!user) {
-            throw new Error('Пользователь не авторизован');
-        }
-
         if (money) {
+            const user = req.session.user;
+
             const userInstance = await UserNamespace.getInstanceById(user.id);
 
             await userInstance.reduceMoneyFromProducer(money);
@@ -405,12 +399,9 @@ app.post('/putProductToCart/shops/:shopId/products/:productId', checkAuth, async
     const { quantity } = req.body;
 
     try {
-        const user = req.session.user;
-        if (!user) {
-            throw new Error('Пользователь не авторизован');
-        }
-        
         if (shopId && productId && quantity) {
+            const user = req.session.user;
+
             let shopInstance = await ShopNamespace.getInstanceById(shopId);
             const productInstance = await ProductNamespace.getInstanceById(productId);
             const userInstance = await UserNamespace.getInstanceById(user.id);
@@ -434,12 +425,9 @@ app.put('/putOutProductFromCart/shops/:shopId/products/:productId', checkAuth, a
     const { quantity } = req.body;
 
     try {
-        const user = req.session.user;
-        if (!user) {
-            throw new Error('Пользователь не авторизован');
-        }
-
         if (shopId && productId && quantity) {
+            const user = req.session.user;
+
             let shopInstance = await ShopNamespace.getInstanceById(shopId);
             const productInstance = await ProductNamespace.getInstanceById(productId);
             const userInstance = await UserNamespace.getInstanceById(user.id);
@@ -459,12 +447,9 @@ app.put('/putOutProductFromCart/shops/:shopId/products/:productId', checkAuth, a
 });
 
 app.post('/buyProducts', checkAuth, async (req, res) => {
-    const user = req.session.user;
-    if (!user) {
-        throw new Error('Пользователь не авторизован');
-    }
-
     try {
+        const user = req.session.user;
+
         let userInstance = await UserNamespace.getInstanceById(user.id);
 
         await userInstance.buyProducts();
@@ -482,16 +467,15 @@ app.post('/buyProducts', checkAuth, async (req, res) => {
 app.get('/api/getProducerShop', checkAuth, async (req, res) => {
     try {
         const user = req.session.user;
-        if (user) {
-            const producerResult = await PoolNamespace.pool.query(
-                'SELECT * FROM producers WHERE user_id = $1',
-                [user.id]
-            );
-            const shopInstance = await ShopNamespace.getShopByProducerId(producerResult.rows[0].id);
-            const shopId = shopInstance.id;
 
-            res.status(200).json({ shopId: shopId });
-        }
+        const producerResult = await PoolNamespace.pool.query(
+            'SELECT * FROM producers WHERE user_id = $1',
+            [user.id]
+        );
+        const shopInstance = await ShopNamespace.getShopByProducerId(producerResult.rows[0].id);
+        const shopId = shopInstance.id;
+
+        res.status(200).json({ shopId: shopId });
     } catch (error) {
         console.error(error);
         res.status(500).json({ 'error': error.message });
@@ -502,33 +486,30 @@ app.get('/api/getProducerShop', checkAuth, async (req, res) => {
 app.post('/api/addNewProductToShop', checkAuth, async (req, res) => {
     const { title, quantity } = req.body;
 
-    const user = req.session.user;
-    if (!user) {
-        return res.status(401).json({ error: 'Пользователь не авторизован' });
-    }
-
     try {
-        if (!title || !quantity) {
+        if (title && quantity) {
+            const user = req.session.user;
+
+            const selectResult = await PoolNamespace.pool.query(`
+                SELECT * FROM products p JOIN user_to_product up ON p.id = up.product_id WHERE title = $1 AND up.user_id = $2`
+                , [title, user.id]
+            );
+    
+            if (selectResult.rows.length === 0) {
+                throw new Error(`Невозможно добавить в машазин товар "${title}", так как он не найден среди имеющихся товаров`);
+            }
+    
+            const productInstance = await ProductNamespace.getInstanceById(selectResult.rows[0].id);
+            const userInstance = await UserNamespace.getInstanceById(user.id);
+    
+            await userInstance.addProductToShop(productInstance, quantity);
+            await DelayNamespace.delay(100);
+    
+            const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+            res.status(200).json({ success: true, shopCatalog: shopInstance.catalog });
+        } else {
             return res.status(400).json({ error: 'Не переданы ID продукта или количество продукта.' });
         }
-
-        const selectResult = await PoolNamespace.pool.query(`
-            SELECT * FROM products p JOIN user_to_product up ON p.id = up.product_id WHERE title = $1 AND up.user_id = $2`
-            , [title, user.id]
-        );
-
-        if (selectResult.rows.length === 0) {
-            throw new Error(`Невозможно добавить в машазин товар "${title}", так как он не найден среди имеющихся товаров`);
-        }
-
-        const productInstance = await ProductNamespace.getInstanceById(selectResult.rows[0].id);
-        const userInstance = await UserNamespace.getInstanceById(user.id);
-
-        await userInstance.addProductToShop(productInstance, quantity);
-        await DelayNamespace.delay(100);
-
-        const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
-        res.status(200).json({ success: true, shopCatalog: shopInstance.catalog });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
@@ -539,24 +520,21 @@ app.post('/api/addNewProductToShop', checkAuth, async (req, res) => {
 app.post('/api/addProductToShop', checkAuth, async (req, res) => {
     const { productId, quantity } = req.body;
 
-    const user = req.session.user;
-    if (!user) {
-        return res.status(401).json({ error: 'Пользователь не авторизован' });
-    }
-
     try {
-        if (!productId || !quantity) {
+        if (productId && quantity) {
+            const user = req.session.user;
+
+            const productInstance = await ProductNamespace.getInstanceById(productId);
+            const userInstance = await UserNamespace.getInstanceById(user.id);
+
+            await userInstance.addProductToShop(productInstance, quantity);
+            await DelayNamespace.delay(100);
+
+            const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+            res.status(200).json({ success: true, shopCatalog: shopInstance.catalog });
+        } else {
             return res.status(400).json({ error: 'Не переданы ID продукта или количество продукта.' });
         }
-
-        const productInstance = await ProductNamespace.getInstanceById(productId);
-        const userInstance = await UserNamespace.getInstanceById(user.id);
-
-        await userInstance.addProductToShop(productInstance, quantity);
-        await DelayNamespace.delay(100);
-
-        const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
-        res.status(200).json({ success: true, shopCatalog: shopInstance.catalog });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
@@ -567,13 +545,10 @@ app.post('/api/addProductToShop', checkAuth, async (req, res) => {
 app.post('/api/reduceProductFromShop', checkAuth, async (req, res) => {
     const { productId, quantity } = req.body;
 
-    const user = req.session.user;
-    if (!user) {
-        throw new Error('Пользователь не авторизован');
-    }
-
     try {
         if (productId && quantity) {
+            const user = req.session.user;
+
             const productInstance = await ProductNamespace.getInstanceById(productId);
             const userInstance = await UserNamespace.getInstanceById(user.id);
 
@@ -594,13 +569,10 @@ app.post('/api/reduceProductFromShop', checkAuth, async (req, res) => {
 app.post('/api/deleteProductFromShop', checkAuth, async (req, res) => {
     const { productId } = req.body;
 
-    const user = req.session.user;
-    if (!user) {
-        throw new Error('Пользователь не авторизован');
-    }
-
     try {
         if (productId) {
+            const user = req.session.user;
+
             const productInstance = await ProductNamespace.getInstanceById(productId);
             const userInstance = await UserNamespace.getInstanceById(user.id);
 
@@ -621,13 +593,10 @@ app.post('/api/deleteProductFromShop', checkAuth, async (req, res) => {
 app.post('/api/addNewProductToOwned', checkAuth, async (req, res) => {
     const { title, price, photo, quantity } = req.body;
 
-    const user = req.session.user;
-    if (!user) {
-        throw new Error('Пользователь не авторизован');
-    }
-
     try {
         if (title && price && photo && quantity) {
+            const user = req.session.user;
+
             let userInstance = await UserNamespace.getInstanceById(user.id);
 
             const selectResult = await PoolNamespace.pool.query(`
@@ -666,13 +635,10 @@ app.post('/api/addNewProductToOwned', checkAuth, async (req, res) => {
 app.post('/api/addOwnedProductToOwned', checkAuth, async (req, res) => {
     const { productId, quantity } = req.body;
 
-    const user = req.session.user;
-    if (!user) {
-        throw new Error('Пользователь не авторизован');
-    }
-
     try {
         if (productId && quantity) {
+            const user = req.session.user;
+
             const productInstance = await ProductNamespace.getInstanceById(productId);
             let userInstance = await UserNamespace.getInstanceById(user.id);
 
@@ -682,7 +648,7 @@ app.post('/api/addOwnedProductToOwned', checkAuth, async (req, res) => {
             userInstance = await UserNamespace.getInstanceById(user.id);
             res.status(200).json({ success: true, userOwnedProducts: userInstance.ownedProducts });
         } else {
-            res.status(400).json({ 'error': 'Не переданы ID продукта, количество продукта.' });
+            throw new Error('Не переданы ID продукта, количество продукта.');
         }
     } catch (error) {
         console.error(error);
