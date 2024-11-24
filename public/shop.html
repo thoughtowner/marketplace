@@ -8,47 +8,107 @@
 <body>
     <div id="shopInfo"></div>
 
+    <div id="addProductFormContainer" style="display: none;">
+        <h3>Добавить новый товар в магазин</h3>
+        <form id="addProductForm">
+            <label for="productTitle">Название товара:</label>
+            <input type="text" id="productTitle" name="title" required>
+            <br>
+            <label for="productQuantity">Количество товара:</label>
+            <input type="number" id="productQuantity" name="quantity" required min="1">
+            <br>
+            <button type="submit">Добавить товар</button>
+        </form>
+    </div>
+
     <script>
         const shopId = window.location.pathname.split('/')[2];
-        
-        fetch(`/api/shops/${shopId}`)
+
+        fetch('/check-role')
+            .then(response => response.json())
+            .then(roleData => {
+                const userRole = roleData.role;
+                if (userRole === 'producer') {
+                    fetch('/api/getProducerShop')
+                        .then(response => response.json())
+                        .then(shopData => {
+                            if (shopData.shopId === shopId) {
+                                document.getElementById('addProductFormContainer').style.display = 'block';
+                            }
+                        });
+                }
+
+                fetch(`/api/shops/${shopId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.shop || !data.catalog || data.catalog.length === 0) {
+                            document.getElementById('shopInfo').innerHTML = '<p>Информация о магазине не найдена или магазин пуст.</p>';
+                        } else {
+                            const titleElement = document.createElement('h2');
+                            titleElement.textContent = `Каталог магазина "${data.shop.title}"`;
+
+                            const productItems = data.catalog.map(product => {
+                                return `
+                                    <div class="product-item" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+                                        <a href="/shops/${shopId}/products/${product.id}">
+                                            <img src="${product.photo}" alt="${product.title}" style="width: 200px; height: 200px; object-fit: cover; margin-bottom: 10px;">
+                                        </a>
+                                        <p><strong>Название:</strong> ${product.title}</p>
+                                        <p><strong>Цена:</strong> ${product.price} руб.</p>
+                                        <p><strong>Общее количество:</strong> ${product.totalQuantity} штук</p>
+                                        <p><strong>Доступно к покупке:</strong> ${product.totalQuantity - product.quantityInCarts} штук</p>
+                                    </div>
+                                `;
+                            }).join('');
+
+                            document.getElementById('shopInfo').innerHTML = '';
+                            document.getElementById('shopInfo').innerHTML = `
+                                <h2>Каталог магазина "${data.shop.title}"</h2>
+                                ${productItems}
+                            `;
+                            document.title = `Каталог магазина ${data.shop.title}`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при получении данных:', error);
+                        document.getElementById('shopInfo').innerHTML = '<p>Не удалось загрузить информацию о магазине.</p>';
+                    });
+
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных о роли:', error);
+            });
+
+        document.getElementById('addProductForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const title = document.getElementById('productTitle').value;
+            const quantity = parseInt(document.getElementById('productQuantity').value, 10);
+
+            fetch('/api/addNewProductToShop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title: title,
+                    quantity: quantity
+                })
+            })
             .then(response => response.json())
             .then(data => {
-                if (!data.shop || !data.catalog || data.catalog.length === 0) {
-                    document.getElementById('shopInfo').innerHTML = '<p>Информация о магазине не найдена или магазин пуст.</p>';
+                if (data.success) {
+                    alert('Товар успешно добавлен в магазин!');
+                    location.reload();
                 } else {
-                    const titleElement = document.createElement('h2');
-                    titleElement.textContent = `Каталог магазина "${data.shop.title}"`;
-
-                    const productItems = data.catalog.map(product => {
-                        return `
-                            <div class="product-item" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
-                                <a href="/shops/${shopId}/products/${product.id}">
-                                    <img src="${product.photo}" alt="${product.title}" style="width: 200px; height: 200px; object-fit: cover; margin-bottom: 10px;">
-                                </a>
-                                <p><strong>Название:</strong> ${product.title}</p>
-                                <p><strong>Цена:</strong> ${product.price} руб.</p>
-                                <p><strong>Общее количество:</strong> ${product.totalQuantity} штук</p>
-                                <p><strong>Доступно к покупке:</strong> ${product.totalQuantity - product.quantityInCarts} штук</p>
-                            </div>
-                        `;
-                    }).join('');
-
-                    const shopInfoDiv = document.createElement('div');
-                    shopInfoDiv.id = 'shopInfo';
-                    shopInfoDiv.appendChild(titleElement);
-                    shopInfoDiv.innerHTML += productItems;
-
-                    document.getElementById('shopInfo').innerHTML = '';
-                    document.getElementById('shopInfo').appendChild(shopInfoDiv);
-
-                    document.title = `Каталог магазина ${data.shop.title}`;
+                    alert('Не удалось добавить товар в магазин. ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('Ошибка при получении данных:', error);
-                document.getElementById('shopInfo').innerHTML = '<p>Не удалось загрузить информацию о магазине.</p>';
+                console.error('Ошибка при добавлении товара в магазин:', error);
+                alert('Произошла ошибка при добавлении товара.');
             });
+        });
     </script>
 
     <div>

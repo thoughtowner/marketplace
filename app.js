@@ -499,6 +499,43 @@ app.get('/api/getProducerShop', checkAuth, async (req, res) => {
 });
 
 
+app.post('/api/addNewProductToShop', checkAuth, async (req, res) => {
+    const { title, quantity } = req.body;
+
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ error: 'Пользователь не авторизован' });
+    }
+
+    try {
+        if (!title || !quantity) {
+            return res.status(400).json({ error: 'Не переданы ID продукта или количество продукта.' });
+        }
+
+        const selectResult = await PoolNamespace.pool.query(`
+            SELECT * FROM products p JOIN user_to_product up ON p.id = up.product_id WHERE title = $1 AND up.user_id = $2`
+            , [title, user.id]
+        );
+
+        if (selectResult.rows.length === 0) {
+            throw new Error(`Невозможно добавить в машазин товар "${title}", так как он не найден среди имеющихся товаров`);
+        }
+
+        const productInstance = await ProductNamespace.getInstanceById(selectResult.rows[0].id);
+        const userInstance = await UserNamespace.getInstanceById(user.id);
+
+        await userInstance.addProductToShop(productInstance, quantity);
+        await DelayNamespace.delay(100);
+
+        const shopInstance = await ShopNamespace.getInstanceById((await ProducerNamespace.getInstanceById(userInstance.producerId)).shopId);
+        res.status(200).json({ success: true, shopCatalog: shopInstance.catalog });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 app.post('/api/addProductToShop', checkAuth, async (req, res) => {
     const { productId, quantity } = req.body;
 
@@ -594,8 +631,8 @@ app.post('/api/addNewProductToOwned', checkAuth, async (req, res) => {
             let userInstance = await UserNamespace.getInstanceById(user.id);
 
             const selectResult = await PoolNamespace.pool.query(`
-                SELECT * FROM products p JOIN user_to_product up ON p.id = up.product_id WHERE title = $1 AND price = $2 AND photo = $3 AND up.user_id = $4`
-                , [title, price, photo, user.id]
+                SELECT * FROM products p JOIN user_to_product up ON p.id = up.product_id WHERE title = $1 AND up.user_id = $2`
+                , [title, user.id]
             );
             if (selectResult.rows.length !== 0) {
                 throw new Error('Товар уже содержится среди имеющихся товаров');
