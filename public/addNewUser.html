@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить нового пользователя</title>
+</head>
+<body>
+    <h1>Добавить нового пользователя</h1>
+    <form id="addUserForm" method="POST" action="/api/addNewUser">
+        <label for="name">Имя:</label>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <label for="role">Роль:</label>
+        <select id="role" name="role" required>
+            <option value="consumer">Покупатель</option>
+            <option value="producer">Продавец</option>
+            <option value="admin">Администратор</option>
+        </select><br><br>
+
+        <div id="shopTitleDiv" style="display:none;">
+            <label for="shopTitle">Название магазина:</label>
+            <input type="text" id="shopTitle" name="shopTitle"><br><br>
+        </div>
+
+        <button type="submit">Добавить пользователя</button>
+    </form>
+
+    <br>
+    <a href="/getAllUsers">Вернуться к списку пользователей</a>
+
+    <script>
+        document.querySelector("#role").addEventListener("change", function() {
+            const shopTitleDiv = document.querySelector("#shopTitleDiv");
+            if (this.value === "producer") {
+                shopTitleDiv.style.display = "block";
+            } else {
+                shopTitleDiv.style.display = "none";
+            }
+        });
+    </script>
+</body>
+</html>

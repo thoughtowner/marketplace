@@ -41,7 +41,9 @@
             fetch('/check-role')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.role === 'consumer') {
+                    if (data.role === 'admin') {
+                        window.location.href = '/';
+                    } else if (data.role === 'consumer') {
                         document.getElementById('consumer-content').style.display = '';
                         document.getElementById('producer-content').style.display = 'none';
                     } else if (data.role === 'producer') {
@@ -61,6 +63,7 @@
                             .catch(error => console.error('Ошибка при получении shopId:', error));
                     }
                 })
+                .catch(error => console.error('Ошибка при получении данных роли:', error));
         });
     </script>
 </body>

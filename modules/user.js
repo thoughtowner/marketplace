@@ -37,12 +37,19 @@ const UserNamespace = {
             if (role === 'consumer') {
                 this.consumerId = roleId;
                 this.producerId = null;
+                this.adminId = null;
             } else if (role === 'producer') {
                 this.producerId = roleId;
                 this.consumerId = null;
+                this.adminId = null;
+            } else if (role === 'admin') {
+                this.producerId = null;
+                this.consumerId = null;
+                this.adminId = roleId;
             } else {
                 this.consumerId = null;
                 this.producerId = null;
+                this.adminId = null;
             }
         }
 
@@ -55,6 +62,10 @@ const UserNamespace = {
             } else if (role === 'producer') {
                 if (!this.producerId) {
                     throw new Error(`Невозможно выполнить метод, так как пользователь не имеет счёта для продаж.`);
+                }
+            } else if (role === 'admin') {
+                if (!this.adminId) {
+                    throw new Error(`Невозможно выполнить метод, так как пользователь не является админом.`);
                 }
             } else {
                 throw new Error(`Невозможно выполнить метод, так как введена неверная роль.`);
@@ -230,12 +241,20 @@ const UserNamespace = {
             [userId]
         );
 
+        const adminResult = await PoolNamespace.pool.query(
+            'SELECT * FROM admins WHERE user_id = $1',
+            [userId]
+        );
+
         if (consumerResult.rows.length > 0) {
             role = 'consumer';
             roleId = consumerResult.rows[0].id;
         } else if (producerResult.rows.length > 0) {
             role = 'producer';
             roleId = producerResult.rows[0].id;
+        } else if (adminResult.rows.length > 0) {
+            role = 'admin';
+            roleId = adminResult.rows[0].id;
         }
 
         const ownedProductsResults = await PoolNamespace.pool.query(
@@ -340,7 +359,7 @@ const UserNamespace = {
         );
 
         if (consumerResult.rows.length === 0) {
-            throw new Error(`В таблице producers нет записей с id "${userId}"`);
+            throw new Error(`В таблице producers нет записей с id "${producerId}"`);
         }
 
         const consumerData = consumerResult.rows[0];
@@ -351,7 +370,7 @@ const UserNamespace = {
         );
 
         if (userResult.rows.length === 0) {
-            throw new Error(`Никакой пользователь не связан с аккаунтом продавца с id ${consumerId}`);
+            throw new Error(`Никакой пользователь не связан с аккаунтом продавца с id ${producerId}`);
         }
 
         const ownedProductsResults = await PoolNamespace.pool.query(
@@ -382,7 +401,65 @@ const UserNamespace = {
 
         const result = {
             ...userResult.rows[0],
-            role: 'consumer',
+            role: 'producer',
+            roleId: producerId,
+            ownedProducts: Object.values(ownedProducts)
+        };
+
+        const userInstance = new this.User(result.id, result.name, result.password, result.role, result.roleId, result.ownedProducts);
+        return userInstance;
+    },
+
+    async getInstanceByAdminId(adminId) {
+        const adminResult = await PoolNamespace.pool.query(
+            'SELECT * FROM admins WHERE id = $1',
+            [adminId]
+        );
+
+        if (adminResult.rows.length === 0) {
+            throw new Error(`В таблице admins нет записей с id "${adminId}"`);
+        }
+
+        const adminData = adminResult.rows[0];
+
+        const userResult = await PoolNamespace.pool.query(
+            'SELECT * FROM users WHERE id = $1',
+            [adminData.user_id]
+        );
+
+        if (userResult.rows.length === 0) {
+            throw new Error(`Никакой пользователь не связан с аккаунтом продавца с id ${adminId}`);
+        }
+
+        const ownedProductsResults = await PoolNamespace.pool.query(
+            `
+                SELECT 
+                    u.id AS user_id,
+                    up.product_id,
+                    up.quantity
+                FROM 
+                    users u
+                LEFT JOIN 
+                    user_to_product up ON u.id = up.user_id
+                WHERE 
+                    u.id = $1
+            `,
+            [userResult.rows[0].id]
+        );
+
+        let ownedProducts = [];
+        ownedProductsResults.rows.forEach(row => {
+            if (row.product_id !== null && row.quantity !== null) {
+                ownedProducts.push({
+                    productId: row.product_id,
+                    quantity: row.quantity
+                });
+            }
+        });
+
+        const result = {
+            ...userResult.rows[0],
+            role: 'admin',
             roleId: producerId,
             ownedProducts: Object.values(ownedProducts)
         };

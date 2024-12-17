@@ -51,6 +51,8 @@ app.get('/check-role', async (req, res) => {
         const producerResult = await PoolNamespace.pool.query('SELECT * FROM producers WHERE user_id = $1', [req.session.user.id]);
         const shopResult = await PoolNamespace.pool.query('SELECT * FROM shops WHERE producer_id = $1', [producerResult.rows[0].id]);
         res.json({ role: 'producer', shopId: shopResult.rows[0].id });
+    } else if (req.session.user.role === 'admin') {
+        res.json({ role: 'admin' });
     }
 });
 
@@ -655,6 +657,124 @@ app.post('/api/addOwnedProductToOwned', checkAuth, async (req, res) => {
         res.status(500).json({ 'error': error.message });
     }
 });
+
+app.get('/getAllUsers', (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/getAllUsers.html');
+});
+
+app.get('/api/getAllUsers', async (req, res) => {
+    try {
+        const user = req.session.user;
+
+        if (user.role !== 'admin') {
+            return res.status(403).json({ error: 'Вы не являетесь администратором.' });
+        }
+
+        const usersResult = await PoolNamespace.pool.query('SELECT * FROM users;');
+
+        const usersData = usersResult.rows;
+
+        res.status(200).json({ users: usersData });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 'error': error.message });
+    }
+});
+
+
+app.delete('/api/deleteUser/:id', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = req.session.user;
+
+        if (user.role !== 'admin') {
+            return res.status(403).json({ error: 'Вы не являетесь администратором.' });
+        }
+
+        const deleteResult = await PoolNamespace.pool.query('DELETE FROM users WHERE id = $1 RETURNING *;', [userId]);
+
+        if (deleteResult.rowCount === 0) {
+            return res.status(404).json({ error: 'Пользователь не найден.' });
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+app.get('/addNewUser', (req, res) => {
+    res.sendFile('/home/ilya/Documents/college-3-semester/marketplace/public/addNewUser.html');
+});
+
+app.post('/api/addNewUser', async (req, res) => {
+    const { name, password, role, shopTitle } = req.body;
+    
+    try {
+        const user = req.session.user;
+
+        if (user.role !== 'admin') {
+            return res.status(403).json({ error: 'Вы не являетесь администратором.' });
+        }
+
+        if (name && password && role) {
+            if (role !== 'consumer' && role !== 'producer' && role != 'admin') {
+                return res.status(401).json({ error: 'Неверно указана роль.' });
+            }
+
+            if (role === 'producer' && !shopTitle) {
+                return res.status(401).json({ error: 'Не передано название магазина для аккаунта "Продавец".' });
+            }
+
+            const userCheck = await PoolNamespace.pool.query('SELECT * FROM users WHERE name = $1', [name]);
+            if (userCheck.rows.length > 0) {
+                return res.status(200).json({ error: 'Пользователь уже существует.' });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            const userResult = await PoolNamespace.pool.query(
+                'INSERT INTO users (name, password, role) VALUES ($1, $2, $3) RETURNING *;',
+                [name, hashedPassword, role]
+            );
+            await DelayNamespace.delay(100);
+
+            const userData = userResult.rows[0];
+
+            if (role === 'consumer') {
+                await PoolNamespace.pool.query(
+                    'INSERT INTO consumers (user_id, money) VALUES ($1, $2);',
+                    [userData.id, 0]
+                );
+            } else if (role === 'producer') {
+                const producerResult = await PoolNamespace.pool.query(
+                    'INSERT INTO producers (user_id, money) VALUES ($1, $2) RETURNING *;',
+                    [userData.id, 0]
+                );
+
+                await PoolNamespace.pool.query(
+                    'INSERT INTO shops (producer_id, title) VALUES ($1, $2);',
+                    [producerResult.rows[0].id, shopTitle]
+                );
+            } else if (role === 'admin') {
+                await PoolNamespace.pool.query(
+                    'INSERT INTO admins (user_id) VALUES ($1);',
+                    [userData.id]
+                );
+            }
+            await DelayNamespace.delay(100);
+
+            res.redirect('/getAllUsers');
+        } else {
+            res.status(400).json({ 'error': 'Не переданы имя пользователя, пароль, роль.' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 
 
