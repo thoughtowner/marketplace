@@ -1,7 +1,7 @@
-import ConsumerNamespace from "./consumer.js";
-import ProducerNamespace from "./producer.js";
-import PoolNamespace from "./pool.js";
-import ShopNamespace from "./shop.js";
+const ConsumerNamespace = require('./consumer.js');
+const ProducerNamespace = require('./producer.js');
+const PoolNamespace = require('./pool.js');
+const ShopNamespace = require('./shop.js');
 
 
 // private
@@ -469,4 +469,4 @@ const UserNamespace = {
     },
 }
 
-export default UserNamespace;
+module.exports = UserNamespace;

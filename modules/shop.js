@@ -1,4 +1,4 @@
-import PoolNamespace from "./pool.js";
+const PoolNamespace = require('./pool.js');
 
 
 const ShopNamespace = {
@@ -156,4 +156,4 @@ const ShopNamespace = {
     }
 }
 
-export default ShopNamespace;
+module.exports = ShopNamespace;

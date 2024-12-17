@@ -1,4 +1,5 @@
-import pg from 'pg';
+const pg = require('pg');
+
 
 const { Pool } = pg;
 const pool = new Pool(
@@ -15,4 +16,4 @@ const PoolNamespace = {
     pool: pool
 };
 
-export default PoolNamespace;
+module.exports = PoolNamespace;

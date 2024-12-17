@@ -1,6 +1,5 @@
-import ShopNamespace from './shop.js';
-import PoolNamespace from "./pool.js";
-import UserNamespace from './user.js';
+const PoolNamespace = require('./pool.js');
+
 
 const ProducerNamespace = {
     Producer: class {
@@ -184,4 +183,4 @@ const ProducerNamespace = {
     }
 }
 
-export default ProducerNamespace;
+module.exports = ProducerNamespace;

@@ -1,18 +1,18 @@
-import express from 'express';
-import pg from 'pg';
-import cors from 'cors';
+const express = require('express');
+const pg = require('pg');
+const cors = require('cors');
 
-import bcrypt from 'bcrypt';
-import bodyParser from 'body-parser';
-import session from 'express-session';
+const bcrypt = require('bcrypt');
+const bodyParser = require('body-parser');
+const session = require('express-session');
 
-import UserNamespace from './modules/user.js';
-import ConsumerNamespace from './modules/consumer.js';
-import ProducerNamespace from './modules/producer.js';
-import ProductNamespace from './modules/product.js';
-import ShopNamespace from './modules/shop.js';
-import PoolNamespace from './modules/pool.js';
-import DelayNamespace from './modules/delay.js';
+const UserNamespace = require('./modules/user.js');
+const ConsumerNamespace = require('./modules/consumer.js');
+const ProducerNamespace = require('./modules/producer.js');
+const ProductNamespace = require('./modules/product.js');
+const ShopNamespace = require('./modules/shop.js');
+const PoolNamespace = require('./modules/pool.js');
+const DelayNamespace = require('./modules/delay.js');
 
 
 const app = express();
@@ -240,7 +240,7 @@ app.get('/api/ownedProducts', checkAuth, async (req, res) => {
     try {
         const user = req.session.user;
         if (!user) {
-            throw new Error('Пользователь не авторизован');
+            return res.status(302).json('Пользователь не авторизован');
         }
 
         const userInstance = await UserNamespace.getInstanceById(user.id);
@@ -330,6 +330,9 @@ app.get('/api/shops/:shopId/products/:productId', async (req, res) => {
     try {
         const shopToProductResult = await PoolNamespace.pool.query('SELECT * FROM shop_to_product WHERE shop_id = $1 AND product_id = $2;', [shopId, productId]);
         const productData = await ProductNamespace.getInstanceById(productId);
+        if (!productData) {
+            return res.status(404).json({ error: 'Продукт не найден' });
+        }
 
         res.json({ product: productData, shopToProduct: shopToProductResult.rows[0] });
     } catch (error) {
@@ -781,3 +784,5 @@ app.post('/api/addNewUser', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
+
+module.exports = app;

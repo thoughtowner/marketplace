@@ -6,4 +6,4 @@ const DelayNamespace = {
     }
 }
 
-export default DelayNamespace;
+module.exports = DelayNamespace;
