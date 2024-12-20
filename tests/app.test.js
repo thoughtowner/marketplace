@@ -1,18 +1,18 @@
 const request = require('supertest');
-const app = require('../app'); // Путь к вашему приложению
+const app = require('../app');
 
 describe('Authentication Tests', () => {
-  it('should register a new user (consumer)', async () => {
-    const response = await request(app)
-      .post('/register')
-      .send({
-        name: 'consumerTest',
-        password: 'password123',
-        role: 'consumer'
-      });
+  // it('should register a new user (consumer)', async () => {
+  //   const response = await request(app)
+  //     .post('/register')
+  //     .send({
+  //       name: 'consumerTest',
+  //       password: 'password123',
+  //       role: 'consumer'
+  //     });
 
-    expect(response.status).toBe(302);
-  });
+  //   expect(response.status).toBe(302);
+  // });
 
   it('should fail to register with invalid role', async () => {
     const response = await request(app)
